@@ -1,0 +1,15 @@
+.app {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+}
+
+.app h1 {
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 48px;
+  font-weight: 700;
+  letter-spacing: -1px;
+  color: #1a1a2e;
+  margin: 0;
+}
