@@ -1,0 +1,25 @@
+{
+  "name": "linkpulse-backend",
+  "version": "1.0.0",
+  "description": "Backend API for LinkPulse — Smart URL Shortener and Link Intelligence Platform",
+  "main": "server.js",
+  "scripts": {
+    "dev": "nodemon server.js",
+    "start": "node server.js",
+    "lint": "echo \"Lint not configured yet\" && exit 0"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "helmet": "^8.0.0",
+    "morgan": "^1.10.0",
+    "nanoid": "^3.3.7"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9"
+  }
+}
