@@ -187,7 +187,7 @@ const redirectLink = async (req, res, next) => {
 
     try {
       await prisma.click.create({
-        data: { linkId: link.id },
+        data: { linkId: link.id, ipAddress: req.ip },
       });
     } catch {
       return res.status(500).json({ error: "Failed to record click" });
