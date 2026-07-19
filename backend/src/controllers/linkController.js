@@ -149,4 +149,27 @@ const updateLink = async (req, res, next) => {
   }
 };
 
-module.exports = { createLink, getMyLinks, getLink, updateLink };
+const deleteLink = async (req, res, next) => {
+  try {
+    const existing = await prisma.link.findFirst({
+      where: {
+        id: req.params.id,
+        userId: req.user.userId,
+      },
+    });
+
+    if (!existing) {
+      return res.status(404).json({ error: "Link not found" });
+    }
+
+    await prisma.link.delete({
+      where: { id: existing.id },
+    });
+
+    res.status(200).json({ message: "Link deleted successfully" });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { createLink, getMyLinks, getLink, updateLink, deleteLink };
