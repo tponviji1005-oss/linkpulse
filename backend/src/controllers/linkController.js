@@ -42,4 +42,25 @@ const createLink = async (req, res, next) => {
   }
 };
 
-module.exports = { createLink };
+const getMyLinks = async (req, res, next) => {
+  try {
+    const links = await prisma.link.findMany({
+      where: { userId: req.user.userId },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        shortCode: true,
+        originalUrl: true,
+        title: true,
+        isActive: true,
+        createdAt: true,
+      },
+    });
+
+    res.status(200).json({ links });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { createLink, getMyLinks };
