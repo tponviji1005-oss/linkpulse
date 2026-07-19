@@ -63,4 +63,32 @@ const getMyLinks = async (req, res, next) => {
   }
 };
 
-module.exports = { createLink, getMyLinks };
+const getLink = async (req, res, next) => {
+  try {
+    const link = await prisma.link.findFirst({
+      where: {
+        id: req.params.id,
+        userId: req.user.userId,
+      },
+      select: {
+        id: true,
+        shortCode: true,
+        originalUrl: true,
+        title: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    if (!link) {
+      return res.status(404).json({ error: "Link not found" });
+    }
+
+    res.status(200).json({ link });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { createLink, getMyLinks, getLink };
