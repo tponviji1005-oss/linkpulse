@@ -5,6 +5,7 @@ const morgan = require("morgan");
 
 const routes = require("./routes");
 const errorHandler = require("./middleware/errorHandler");
+const { redirectLink } = require("./controllers/linkController");
 
 const app = express();
 
@@ -23,6 +24,8 @@ app.get("/health", (req, res) => {
 app.get("/", (req, res) => {
   res.json({ message: "LinkPulse API running 🚀" });
 });
+
+app.get("/:shortCode", redirectLink);
 
 app.use(errorHandler);
 

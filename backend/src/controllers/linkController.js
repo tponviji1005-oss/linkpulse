@@ -172,4 +172,23 @@ const deleteLink = async (req, res, next) => {
   }
 };
 
-module.exports = { createLink, getMyLinks, getLink, updateLink, deleteLink };
+const redirectLink = async (req, res, next) => {
+  try {
+    const link = await prisma.link.findFirst({
+      where: {
+        shortCode: req.params.shortCode,
+        isActive: true,
+      },
+    });
+
+    if (!link) {
+      return res.status(404).json({ error: "Short link not found" });
+    }
+
+    res.redirect(link.originalUrl);
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { createLink, getMyLinks, getLink, updateLink, deleteLink, redirectLink };
