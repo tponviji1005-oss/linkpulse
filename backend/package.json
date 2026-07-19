@@ -13,13 +13,16 @@
   "license": "MIT",
   "dependencies": {
     "@prisma/client": "^7.8.0",
+    "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.3",
     "morgan": "^1.10.0",
     "nanoid": "^3.3.7",
-    "prisma": "^7.8.0"
+    "prisma": "^7.8.0",
+    "validator": "^13.15.35"
   },
   "devDependencies": {
     "nodemon": "^3.1.9"
