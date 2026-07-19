@@ -1,5 +1,6 @@
 const { nanoid } = require("nanoid");
 const validator = require("validator");
+const UAParser = require("ua-parser-js");
 const prisma = require("../config/prisma");
 
 const createLink = async (req, res, next) => {
@@ -185,9 +186,21 @@ const redirectLink = async (req, res, next) => {
       return res.status(404).json({ error: "Short link not found" });
     }
 
+    const parser = new UAParser(req.headers["user-agent"]);
+    const uaResult = parser.getResult();
+    const browser = uaResult.browser.name || null;
+    const os = uaResult.os.name || null;
+    const device = uaResult.device.type || "desktop";
+
     try {
       await prisma.click.create({
-        data: { linkId: link.id, ipAddress: req.ip },
+        data: {
+          linkId: link.id,
+          ipAddress: req.ip,
+          browser,
+          os,
+          device,
+        },
       });
     } catch {
       return res.status(500).json({ error: "Failed to record click" });
