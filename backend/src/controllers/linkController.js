@@ -185,6 +185,14 @@ const redirectLink = async (req, res, next) => {
       return res.status(404).json({ error: "Short link not found" });
     }
 
+    try {
+      await prisma.click.create({
+        data: { linkId: link.id },
+      });
+    } catch {
+      return res.status(500).json({ error: "Failed to record click" });
+    }
+
     res.redirect(link.originalUrl);
   } catch (error) {
     next(error);
