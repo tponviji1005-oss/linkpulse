@@ -173,8 +173,17 @@ const deleteLink = async (req, res, next) => {
   }
 };
 
+/**
+ * Resolves a short code to its original URL and redirects the visitor.
+ * Records analytics (IP, browser, OS, device) before redirecting.
+ *
+ * @param {import("express").Request} req - Express request with `shortCode` param
+ * @param {import("express").Response} res - Express response
+ * @param {import("express").NextFunction} next - Express next middleware
+ */
 const redirectLink = async (req, res, next) => {
   try {
+    // Find the active link matching the short code
     const link = await prisma.link.findFirst({
       where: {
         shortCode: req.params.shortCode,
@@ -186,12 +195,14 @@ const redirectLink = async (req, res, next) => {
       return res.status(404).json({ error: "Short link not found" });
     }
 
+    // Parse User-Agent for browser, OS, and device type
     const parser = new UAParser(req.headers["user-agent"]);
     const uaResult = parser.getResult();
     const browser = uaResult.browser.name || null;
     const os = uaResult.os.name || null;
     const device = uaResult.device.type || "desktop";
 
+    // Record the click asynchronously (IP + parsed UA data)
     try {
       await prisma.click.create({
         data: {
@@ -206,6 +217,7 @@ const redirectLink = async (req, res, next) => {
       return res.status(500).json({ error: "Failed to record click" });
     }
 
+    // Redirect visitor to the original destination
     res.redirect(link.originalUrl);
   } catch (error) {
     next(error);
