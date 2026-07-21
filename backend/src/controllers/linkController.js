@@ -197,10 +197,10 @@ const redirectLink = async (req, res, next) => {
 
     // Parse User-Agent for browser, OS, and device type
     const parser = new UAParser(req.headers["user-agent"]);
-    const uaResult = parser.getResult();
-    const browser = uaResult.browser.name || null;
-    const os = uaResult.os.name || null;
-    const device = uaResult.device.type || "desktop";
+    const { browser, os, device } = parser.getResult();
+    const browserName = browser.name || null;
+    const osName = os.name || null;
+    const deviceType = device.type || "desktop";
 
     // Record the click asynchronously (IP + parsed UA data)
     try {
