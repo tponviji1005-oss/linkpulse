@@ -202,7 +202,7 @@ const redirectLink = async (req, res, next) => {
     const osName = os.name || null;
     const deviceType = device.type || "desktop";
 
-    // Record the click asynchronously (IP + parsed UA data)
+    // Record the click asynchronously (IP + parsed UA data + referer)
     try {
       await prisma.click.create({
         data: {
@@ -211,6 +211,7 @@ const redirectLink = async (req, res, next) => {
           browser,
           os,
           device,
+          referer: req.get("referer") || null,
         },
       });
     } catch {
