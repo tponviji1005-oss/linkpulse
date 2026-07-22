@@ -212,6 +212,7 @@ const redirectLink = async (req, res, next) => {
           os,
           device,
           referer: req.get("referer") || null,
+          userAgent: req.get("user-agent") || null,
         },
       });
     } catch {
