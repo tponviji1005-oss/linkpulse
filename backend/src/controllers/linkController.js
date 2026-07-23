@@ -175,7 +175,9 @@ const deleteLink = async (req, res, next) => {
 
 /**
  * Resolves a short code to its original URL and redirects the visitor.
- * Records analytics (IP, browser, OS, device) before redirecting.
+ * Only active links can be redirected; deactivated or deleted links return 404.
+ * Click analytics (IP, browser, OS, device, referer) are recorded before
+ * the redirect is issued so that every successful redirect is captured.
  *
  * @param {import("express").Request} req - Express request with `shortCode` param
  * @param {import("express").Response} res - Express response
@@ -183,7 +185,8 @@ const deleteLink = async (req, res, next) => {
  */
 const redirectLink = async (req, res, next) => {
   try {
-    // Find the active link matching the short code
+    // Filter by isActive to ensure deactivated links are never redirected,
+    // even if their short code still exists in the database.
     const link = await prisma.link.findFirst({
       where: {
         shortCode: req.params.shortCode,
@@ -195,14 +198,17 @@ const redirectLink = async (req, res, next) => {
       return res.status(404).json({ error: "Short link not found" });
     }
 
-    // Parse User-Agent for browser, OS, and device type
+    // Parse the User-Agent header to extract structured browser,
+    // OS, and device information for click analytics.
     const parser = new UAParser(req.headers["user-agent"]);
     const { browser, os, device } = parser.getResult();
     const browserName = browser.name || null;
     const osName = os.name || null;
     const deviceType = device.type || "desktop";
 
-    // Record the click asynchronously (IP + parsed UA data + referer)
+    // Persist analytics before issuing the redirect. The click record
+    // must be written while we still have access to the request context
+    // (IP, headers); after res.redirect() the connection may close.
     try {
       await prisma.click.create({
         data: {
@@ -216,10 +222,14 @@ const redirectLink = async (req, res, next) => {
         },
       });
     } catch {
+      // Analytics failures are non-fatal in principle, but the current
+      // implementation surfaces a 500 so data-integrity issues are not
+      // silently swallowed during development and monitoring.
       return res.status(500).json({ error: "Failed to record click" });
     }
 
-    // Redirect visitor to the original destination
+    // Issue the redirect immediately after the click is recorded so the
+    // visitor reaches their destination with minimal added latency.
     res.redirect(link.originalUrl);
   } catch (error) {
     next(error);
