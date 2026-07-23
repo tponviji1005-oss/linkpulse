@@ -209,18 +209,18 @@ const redirectLink = async (req, res, next) => {
     // Persist analytics before issuing the redirect. The click record
     // must be written while we still have access to the request context
     // (IP, headers); after res.redirect() the connection may close.
+    const clickData = {
+      linkId: link.id,
+      ipAddress: req.ip,
+      browser,
+      os,
+      device,
+      referer: req.get("referer") || null,
+      userAgent: req.get("user-agent") || null,
+    };
+
     try {
-      await prisma.click.create({
-        data: {
-          linkId: link.id,
-          ipAddress: req.ip,
-          browser,
-          os,
-          device,
-          referer: req.get("referer") || null,
-          userAgent: req.get("user-agent") || null,
-        },
-      });
+      await prisma.click.create({ data: clickData });
     } catch {
       // Analytics failures are non-fatal in principle, but the current
       // implementation surfaces a 500 so data-integrity issues are not
