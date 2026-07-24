@@ -236,4 +236,53 @@ const redirectLink = async (req, res, next) => {
   }
 };
 
-module.exports = { createLink, getMyLinks, getLink, updateLink, deleteLink, redirectLink };
+const getLinkAnalytics = async (req, res, next) => {
+  try {
+    const existing = await prisma.link.findFirst({
+      where: {
+        id: req.params.id,
+        userId: req.user.userId,
+      },
+    });
+
+    if (!existing) {
+      return res.status(404).json({ error: "Link not found" });
+    }
+
+    const clicks = await prisma.click.findMany({
+      where: { linkId: existing.id },
+      select: {
+        browser: true,
+        device: true,
+        os: true,
+      },
+    });
+
+    const totalClicks = clicks.length;
+
+    const browserBreakdown = {};
+    const deviceBreakdown = {};
+    const osBreakdown = {};
+
+    for (const click of clicks) {
+      const browserName = click.browser || "Unknown";
+      const deviceType = click.device || "Unknown";
+      const osName = click.os || "Unknown";
+
+      browserBreakdown[browserName] = (browserBreakdown[browserName] || 0) + 1;
+      deviceBreakdown[deviceType] = (deviceBreakdown[deviceType] || 0) + 1;
+      osBreakdown[osName] = (osBreakdown[osName] || 0) + 1;
+    }
+
+    res.status(200).json({
+      totalClicks,
+      browserBreakdown,
+      deviceBreakdown,
+      osBreakdown,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { createLink, getMyLinks, getLink, updateLink, deleteLink, redirectLink, getLinkAnalytics };
