@@ -3,6 +3,7 @@ const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
 
+const redis = require("./config/redis");
 const routes = require("./routes");
 const errorHandler = require("./middleware/errorHandler");
 const { redirectLink } = require("./controllers/linkController");
@@ -18,7 +19,8 @@ app.use(express.json());
 app.use("/api", routes);
 
 app.get("/health", (req, res) => {
-  res.json({ status: "ok", uptime: process.uptime() });
+  const redisStatus = redis ? redis.status : "not configured";
+  res.json({ status: "ok", uptime: process.uptime(), redis: redisStatus });
 });
 
 app.get("/", (req, res) => {
@@ -28,5 +30,20 @@ app.get("/", (req, res) => {
 app.get("/:shortCode", redirectLink);
 
 app.use(errorHandler);
+
+if (redis) {
+  const shutdown = async (signal) => {
+    console.log(`${signal} received — closing Redis connection`);
+    try {
+      await redis.quit();
+    } catch {
+      redis.disconnect();
+    }
+    process.exit(0);
+  };
+
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
+  process.on("SIGINT", () => shutdown("SIGINT"));
+}
 
 module.exports = app;
