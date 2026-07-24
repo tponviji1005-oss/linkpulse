@@ -212,9 +212,9 @@ const redirectLink = async (req, res, next) => {
     const clickData = {
       linkId: link.id,
       ipAddress: req.ip,
-      browser,
-      os,
-      device,
+      browser: browserName,
+      os: osName,
+      device: deviceType,
       referer: req.get("referer") || null,
       userAgent: req.get("user-agent") || null,
     };
