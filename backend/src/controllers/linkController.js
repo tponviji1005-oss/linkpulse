@@ -2,6 +2,8 @@ const { nanoid } = require("nanoid");
 const validator = require("validator");
 const UAParser = require("ua-parser-js");
 const prisma = require("../config/prisma");
+const { getCache, setCache, invalidateCache } = require("../utils/cache");
+const { redirectKey } = require("../utils/cacheKeys");
 
 const createLink = async (req, res, next) => {
   try {
@@ -144,6 +146,8 @@ const updateLink = async (req, res, next) => {
       },
     });
 
+    await invalidateCache(redirectKey(existing.shortCode));
+
     res.status(200).json({ message: "Link updated successfully", link });
   } catch (error) {
     next(error);
@@ -167,6 +171,8 @@ const deleteLink = async (req, res, next) => {
       where: { id: existing.id },
     });
 
+    await invalidateCache(redirectKey(existing.shortCode));
+
     res.status(200).json({ message: "Link deleted successfully" });
   } catch (error) {
     next(error);
@@ -183,16 +189,31 @@ const deleteLink = async (req, res, next) => {
  * @param {import("express").Response} res - Express response
  * @param {import("express").NextFunction} next - Express next middleware
  */
+const REDIRECT_CACHE_TTL = 3600; // 1 hour
+
 const redirectLink = async (req, res, next) => {
   try {
-    // Filter by isActive to ensure deactivated links are never redirected,
-    // even if their short code still exists in the database.
-    const link = await prisma.link.findFirst({
-      where: {
-        shortCode: req.params.shortCode,
-        isActive: true,
-      },
-    });
+    const { shortCode } = req.params;
+    const cacheRedisKey = redirectKey(shortCode);
+
+    let link = await getCache(cacheRedisKey);
+
+    if (!link) {
+      link = await prisma.link.findFirst({
+        where: {
+          shortCode,
+          isActive: true,
+        },
+        select: {
+          id: true,
+          originalUrl: true,
+        },
+      });
+
+      if (link) {
+        await setCache(cacheRedisKey, link, REDIRECT_CACHE_TTL);
+      }
+    }
 
     if (!link) {
       return res.status(404).json({ error: "Short link not found" });
