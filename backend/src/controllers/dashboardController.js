@@ -48,4 +48,41 @@ const getDashboardSummary = async (req, res, next) => {
   }
 };
 
-module.exports = { getDashboardSummary };
+const getTopLinks = async (req, res, next) => {
+  try {
+    const links = await prisma.link.findMany({
+      where: { userId: req.user.userId },
+      select: {
+        id: true,
+        shortCode: true,
+        title: true,
+        originalUrl: true,
+        isActive: true,
+        createdAt: true,
+        _count: {
+          select: { clicks: true },
+        },
+      },
+      orderBy: {
+        clicks: { _count: "desc" },
+      },
+      take: 5,
+    });
+
+    const topLinks = links.map((link) => ({
+      id: link.id,
+      shortCode: link.shortCode,
+      title: link.title,
+      originalUrl: link.originalUrl,
+      isActive: link.isActive,
+      createdAt: link.createdAt,
+      clickCount: link._count.clicks,
+    }));
+
+    res.status(200).json({ topLinks });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { getDashboardSummary, getTopLinks };
