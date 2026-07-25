@@ -3,7 +3,7 @@ const validator = require("validator");
 const UAParser = require("ua-parser-js");
 const prisma = require("../config/prisma");
 const { getCache, setCache, invalidateCache } = require("../utils/cache");
-const { redirectKey } = require("../utils/cacheKeys");
+const { redirectKey, dashboardSummaryKey, topLinksKey } = require("../utils/cacheKeys");
 
 const createLink = async (req, res, next) => {
   try {
@@ -40,6 +40,8 @@ const createLink = async (req, res, next) => {
       message: "Short link created successfully",
       link,
     });
+
+    await invalidateCache(dashboardSummaryKey(req.user.userId), topLinksKey(req.user.userId));
   } catch (error) {
     next(error);
   }
@@ -149,6 +151,8 @@ const updateLink = async (req, res, next) => {
     await invalidateCache(redirectKey(existing.shortCode));
 
     res.status(200).json({ message: "Link updated successfully", link });
+
+    await invalidateCache(dashboardSummaryKey(req.user.userId), topLinksKey(req.user.userId));
   } catch (error) {
     next(error);
   }
@@ -174,6 +178,8 @@ const deleteLink = async (req, res, next) => {
     await invalidateCache(redirectKey(existing.shortCode));
 
     res.status(200).json({ message: "Link deleted successfully" });
+
+    await invalidateCache(dashboardSummaryKey(req.user.userId), topLinksKey(req.user.userId));
   } catch (error) {
     next(error);
   }

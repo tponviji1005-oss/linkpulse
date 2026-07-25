@@ -1,7 +1,17 @@
 const prisma = require("../config/prisma");
+const { getCache, setCache } = require("../utils/cache");
+const { dashboardSummaryKey, topLinksKey } = require("../utils/cacheKeys");
+
+const DASHBOARD_CACHE_TTL = 60;
 
 const getDashboardSummary = async (req, res, next) => {
   try {
+    const cacheKey = dashboardSummaryKey(req.user.userId);
+    const cached = await getCache(cacheKey);
+    if (cached) {
+      return res.status(200).json(cached);
+    }
+
     const links = await prisma.link.findMany({
       where: { userId: req.user.userId },
       select: { id: true, isActive: true },
@@ -36,13 +46,17 @@ const getDashboardSummary = async (req, res, next) => {
       },
     });
 
-    res.status(200).json({
+    const payload = {
       totalLinks,
       activeLinks,
       inactiveLinks,
       totalClicks,
       recentLinks,
-    });
+    };
+
+    await setCache(cacheKey, payload, DASHBOARD_CACHE_TTL);
+
+    res.status(200).json(payload);
   } catch (error) {
     next(error);
   }
@@ -50,6 +64,12 @@ const getDashboardSummary = async (req, res, next) => {
 
 const getTopLinks = async (req, res, next) => {
   try {
+    const cacheKey = topLinksKey(req.user.userId);
+    const cached = await getCache(cacheKey);
+    if (cached) {
+      return res.status(200).json(cached);
+    }
+
     const links = await prisma.link.findMany({
       where: { userId: req.user.userId },
       select: {
@@ -79,7 +99,11 @@ const getTopLinks = async (req, res, next) => {
       clickCount: link._count.clicks,
     }));
 
-    res.status(200).json({ topLinks });
+    const payload = { topLinks };
+
+    await setCache(cacheKey, payload, DASHBOARD_CACHE_TTL);
+
+    res.status(200).json(payload);
   } catch (error) {
     next(error);
   }
