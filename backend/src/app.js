@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
+const rateLimit = require("express-rate-limit");
 
 const redis = require("./config/redis");
 const routes = require("./routes");
@@ -10,12 +11,29 @@ const { redirectLink } = require("./controllers/linkController");
 
 const app = express();
 
+const authLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many requests, please try again later" },
+});
+
+const redirectLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many requests, please try again later" },
+});
+
 app.use(helmet());
 app.use(morgan("dev"));
 // TODO: Restrict cors origin to frontend URL once frontend is built
 app.use(cors());
 app.use(express.json());
 
+app.use("/api/auth", authLimiter);
 app.use("/api", routes);
 
 app.get("/health", (req, res) => {
@@ -27,7 +45,7 @@ app.get("/", (req, res) => {
   res.json({ message: "LinkPulse API running 🚀" });
 });
 
-app.get("/:shortCode", redirectLink);
+app.get("/:shortCode", redirectLimiter, redirectLink);
 
 app.use(errorHandler);
 
