@@ -21,3 +21,16 @@ export async function createLink(originalUrl, customSlug) {
     body: JSON.stringify(body),
   });
 }
+
+export async function updateLink(id, data) {
+  return request(`/api/links/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteLink(id) {
+  return request(`/api/links/${id}`, {
+    method: 'DELETE',
+  });
+}

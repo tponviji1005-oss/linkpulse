@@ -40,7 +40,7 @@ function Dashboard() {
       {loading ? (
         <p className="empty-msg">Loading links...</p>
       ) : (
-        <LinksTable links={links} />
+        <LinksTable links={links} onRefresh={fetchLinks} />
       )}
     </div>
   );

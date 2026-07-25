@@ -339,3 +339,126 @@
   white-space: nowrap;
   color: #666;
 }
+
+/* Table Action Buttons */
+.actions-cell {
+  white-space: nowrap;
+  display: flex;
+  gap: 6px;
+}
+
+.btn-sm {
+  padding: 5px 10px;
+  font-size: 12px;
+  border-radius: 4px;
+}
+
+.btn-edit {
+  background: #e8ecff;
+  color: #4361ee;
+}
+
+.btn-edit:hover {
+  background: #d5dbff;
+  opacity: 1;
+}
+
+.btn-delete {
+  background: #fee;
+  color: #c00;
+}
+
+.btn-delete:hover {
+  background: #fdd;
+  opacity: 1;
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: #fff;
+  border-radius: 10px;
+  width: 90%;
+  max-width: 480px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 24px;
+  border-bottom: 1px solid #eee;
+}
+
+.modal-header h2 {
+  font-size: 18px;
+  margin: 0;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 22px;
+  cursor: pointer;
+  color: #888;
+  padding: 0 4px;
+  line-height: 1;
+}
+
+.modal-close:hover {
+  color: #333;
+}
+
+.modal-form {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.modal-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #555;
+}
+
+.modal-checkbox {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.modal-checkbox input {
+  width: 16px;
+  height: 16px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 8px;
+}
+
+.btn-cancel {
+  background: #f0f0f0;
+  color: #555;
+}
+
+.btn-cancel:hover {
+  background: #e4e4e4;
+  opacity: 1;
+}
