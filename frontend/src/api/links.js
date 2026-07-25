@@ -4,6 +4,10 @@ export async function getDashboard() {
   return request('/api/dashboard');
 }
 
+export async function getTopLinks() {
+  return request('/api/dashboard/top-links');
+}
+
 export async function getLinks() {
   return request('/api/links');
 }

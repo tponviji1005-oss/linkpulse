@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { getLinks } from '../api/links.js';
 import DashboardStats from '../components/DashboardStats.jsx';
 import CreateLinkForm from '../components/CreateLinkForm.jsx';
+import TopLinks from '../components/TopLinks.jsx';
 import LinksTable from '../components/LinksTable.jsx';
 
 function Dashboard() {
@@ -29,7 +30,10 @@ function Dashboard() {
     <div className="dashboard">
       <DashboardStats />
 
-      <CreateLinkForm onCreated={fetchLinks} />
+      <div className="dashboard-row">
+        <CreateLinkForm onCreated={fetchLinks} />
+        <TopLinks />
+      </div>
 
       {error && <div className="error-msg">{error}</div>}
 

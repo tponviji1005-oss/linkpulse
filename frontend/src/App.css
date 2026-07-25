@@ -221,6 +221,80 @@
   font-weight: 500;
 }
 
+/* Dashboard Row (side-by-side panels) */
+.dashboard-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+/* Top Performing Links */
+.top-links-card {
+  background: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
+
+.top-links-title {
+  font-size: 18px;
+  margin-bottom: 14px;
+}
+
+.top-links-loading {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.top-links-skeleton {
+  height: 36px;
+  background: #eee;
+  border-radius: 4px;
+}
+
+.top-links-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.top-links-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid #f0f0f0;
+  gap: 12px;
+}
+
+.top-links-item:last-child {
+  border-bottom: none;
+}
+
+.top-links-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.top-links-original {
+  font-size: 13px;
+  color: #888;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.top-links-clicks {
+  font-size: 18px;
+  font-weight: 700;
+  color: #4361ee;
+  flex-shrink: 0;
+}
+
 /* Links Table */
 .links-table-wrap {
   overflow-x: auto;
