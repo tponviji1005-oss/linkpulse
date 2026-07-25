@@ -4,6 +4,7 @@ import Navbar from './components/Navbar.jsx';
 import Login from './pages/Login.jsx';
 import Register from './pages/Register.jsx';
 import Dashboard from './pages/Dashboard.jsx';
+import Analytics from './pages/Analytics.jsx';
 import './App.css';
 
 function ProtectedRoute({ children }) {
@@ -37,6 +38,10 @@ function App() {
             <Route
               path="/dashboard"
               element={<ProtectedRoute><Dashboard /></ProtectedRoute>}
+            />
+            <Route
+              path="/analytics/:id"
+              element={<ProtectedRoute><Analytics /></ProtectedRoute>}
             />
           </Routes>
         </main>

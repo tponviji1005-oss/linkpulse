@@ -373,6 +373,16 @@
   opacity: 1;
 }
 
+.btn-analytics {
+  background: #e6f9f0;
+  color: #0d7a4a;
+}
+
+.btn-analytics:hover {
+  background: #d0f2e3;
+  opacity: 1;
+}
+
 /* Modal */
 .modal-overlay {
   position: fixed;
@@ -461,4 +471,129 @@
 .btn-cancel:hover {
   background: #e4e4e4;
   opacity: 1;
+}
+
+/* Analytics Page */
+.analytics-page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.btn-back {
+  align-self: flex-start;
+  background: none;
+  color: #4361ee;
+  padding: 0;
+  font-size: 14px;
+}
+
+.btn-back:hover {
+  opacity: 0.7;
+  text-decoration: underline;
+}
+
+.analytics-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.analytics-title {
+  font-size: 24px;
+  color: #1a1a2e;
+  margin: 0;
+}
+
+.analytics-original {
+  font-size: 14px;
+  color: #888;
+  margin-top: 4px;
+  max-width: 500px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.analytics-total {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.analytics-loading {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.analytics-skeleton {
+  height: 120px;
+  background: #eee;
+  border-radius: 8px;
+}
+
+.analytics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.analytics-card {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.analytics-card-title {
+  font-size: 16px;
+  color: #1a1a2e;
+  margin: 0 0 14px 0;
+}
+
+.breakdown-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.breakdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.breakdown-label {
+  font-size: 13px;
+  color: #555;
+  min-width: 70px;
+  flex-shrink: 0;
+}
+
+.breakdown-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a1a2e;
+  min-width: 24px;
+  text-align: right;
+}
+
+.breakdown-bar-track {
+  flex: 1;
+  height: 6px;
+  background: #f0f0f0;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.breakdown-bar-fill {
+  display: block;
+  height: 100%;
+  background: #4361ee;
+  border-radius: 3px;
 }

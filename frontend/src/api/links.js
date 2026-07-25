@@ -34,3 +34,7 @@ export async function deleteLink(id) {
     method: 'DELETE',
   });
 }
+
+export async function getLinkAnalytics(id) {
+  return request(`/api/links/${id}/analytics`);
+}

@@ -1,10 +1,12 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { deleteLink } from '../api/links.js';
 import EditLinkModal from './EditLinkModal.jsx';
 
 function LinksTable({ links, onRefresh }) {
   const [editingLink, setEditingLink] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
+  const navigate = useNavigate();
 
   async function handleDelete(link) {
     const confirmed = window.confirm('Are you sure you want to delete this link?');
@@ -56,6 +58,13 @@ function LinksTable({ links, onRefresh }) {
               <td>{link._count?.clicks ?? link.clickCount ?? 0}</td>
               <td>{new Date(link.createdAt).toLocaleDateString()}</td>
               <td className="actions-cell">
+                <button
+                  className="btn btn-sm btn-analytics"
+                  onClick={() => navigate(`/analytics/${link.id}`, { state: link })}
+                  disabled={deletingId === link.id}
+                >
+                  Analytics
+                </button>
                 <button
                   className="btn btn-sm btn-edit"
                   onClick={() => setEditingLink(link)}
