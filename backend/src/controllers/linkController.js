@@ -4,6 +4,7 @@ const UAParser = require("ua-parser-js");
 const prisma = require("../config/prisma");
 const { getCache, setCache, invalidateCache } = require("../utils/cache");
 const { redirectKey, dashboardSummaryKey, topLinksKey } = require("../utils/cacheKeys");
+const { isBot } = require("../utils/botDetection");
 
 const createLink = async (req, res, next) => {
   try {
@@ -236,6 +237,8 @@ const redirectLink = async (req, res, next) => {
     // Persist analytics before issuing the redirect. The click record
     // must be written while we still have access to the request context
     // (IP, headers); after res.redirect() the connection may close.
+    const userAgent = req.get("user-agent") || null;
+
     const clickData = {
       linkId: link.id,
       ipAddress: req.ip,
@@ -243,7 +246,8 @@ const redirectLink = async (req, res, next) => {
       os: osName,
       device: deviceType,
       referer: req.get("referer") || null,
-      userAgent: req.get("user-agent") || null,
+      userAgent,
+      isBot: isBot(userAgent),
     };
 
     try {

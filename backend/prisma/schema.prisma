@@ -48,6 +48,7 @@ model Click {
   device    String?  @db.VarChar(20)
   browser   String?  @db.VarChar(50)
   os        String?  @db.VarChar(50)
+  isBot     Boolean  @default(false) @map("is_bot")
   createdAt DateTime @default(now()) @map("created_at")
 
   link Link @relation(fields: [linkId], references: [id], onDelete: Cascade)
