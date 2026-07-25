@@ -60,6 +60,7 @@ const getMyLinks = async (req, res, next) => {
         title: true,
         isActive: true,
         createdAt: true,
+        _count: { select: { clicks: true } },
       },
     });
 
