@@ -1,5 +1,9 @@
 import request from './client.js';
 
+export async function getDashboard() {
+  return request('/api/dashboard');
+}
+
 export async function getLinks() {
   return request('/api/links');
 }

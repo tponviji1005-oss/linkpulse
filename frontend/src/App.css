@@ -180,6 +180,47 @@
   flex: 0 0 auto;
 }
 
+/* Dashboard Stats */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.stat-card {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.stat-card-loading {
+  min-height: 80px;
+}
+
+.stat-skeleton {
+  height: 28px;
+  width: 60%;
+  background: #eee;
+  border-radius: 4px;
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1a1a2e;
+  line-height: 1;
+}
+
+.stat-label {
+  font-size: 13px;
+  color: #888;
+  font-weight: 500;
+}
+
 /* Links Table */
 .links-table-wrap {
   overflow-x: auto;

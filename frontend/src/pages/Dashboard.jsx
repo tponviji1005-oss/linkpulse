@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getLinks } from '../api/links.js';
+import DashboardStats from '../components/DashboardStats.jsx';
 import CreateLinkForm from '../components/CreateLinkForm.jsx';
 import LinksTable from '../components/LinksTable.jsx';
 
@@ -26,6 +27,8 @@ function Dashboard() {
 
   return (
     <div className="dashboard">
+      <DashboardStats />
+
       <CreateLinkForm onCreated={fetchLinks} />
 
       {error && <div className="error-msg">{error}</div>}
