@@ -1,3 +1,4 @@
+const QRCode = require("qrcode");
 const { nanoid } = require("nanoid");
 const validator = require("validator");
 const UAParser = require("ua-parser-js");
@@ -317,4 +318,36 @@ const getLinkAnalytics = async (req, res, next) => {
   }
 };
 
-module.exports = { createLink, getMyLinks, getLink, updateLink, deleteLink, redirectLink, getLinkAnalytics };
+const generateQRCode = async (req, res, next) => {
+  try {
+    const link = await prisma.link.findFirst({
+      where: {
+        id: req.params.id,
+        userId: req.user.userId,
+      },
+      select: {
+        id: true,
+        shortCode: true,
+      },
+    });
+
+    if (!link) {
+      return res.status(404).json({ error: "Link not found" });
+    }
+
+    const shortUrl = `${req.protocol}://${req.get("host")}/${link.shortCode}`;
+    const png = await QRCode.toBuffer(shortUrl, {
+      type: "png",
+      width: 400,
+      margin: 2,
+      color: { dark: "#1a1a2e", light: "#ffffff" },
+    });
+
+    res.set("Content-Type", "image/png");
+    res.send(png);
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { createLink, getMyLinks, getLink, updateLink, deleteLink, redirectLink, getLinkAnalytics, generateQRCode };

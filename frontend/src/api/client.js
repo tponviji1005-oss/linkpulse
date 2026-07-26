@@ -26,4 +26,23 @@ async function request(path, options = {}) {
   return data;
 }
 
+async function requestBlob(path) {
+  const token = localStorage.getItem('token');
+
+  const headers = {};
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const res = await fetch(`${BASE_URL}${path}`, { headers });
+
+  if (!res.ok) {
+    const data = await res.json();
+    throw new Error(data.error || data.message || 'Request failed');
+  }
+
+  return res.blob();
+}
+
+export { requestBlob };
 export default request;

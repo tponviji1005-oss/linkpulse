@@ -1,4 +1,4 @@
-import request from './client.js';
+import request, { requestBlob } from './client.js';
 
 export async function getDashboard() {
   return request('/api/dashboard');
@@ -34,4 +34,8 @@ export async function deleteLink(id) {
 
 export async function getLinkAnalytics(id) {
   return request(`/api/links/${id}/analytics`);
+}
+
+export async function getLinkQRCode(id) {
+  return requestBlob(`/api/links/${id}/qrcode`);
 }

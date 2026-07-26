@@ -593,3 +593,103 @@
   background: #4361ee;
   border-radius: 3px;
 }
+
+/* QR Code Modal */
+.btn-qr {
+  background: #f0e6ff;
+  color: #7c3aed;
+}
+
+.btn-qr:hover {
+  background: #e4d4ff;
+  opacity: 1;
+}
+
+.qr-modal-body {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.qr-short-url {
+  font-size: 13px;
+  color: #888;
+  word-break: break-all;
+  text-align: center;
+}
+
+.qr-preview {
+  width: 200px;
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.qr-loading {
+  background: #f5f5f5;
+  border-radius: 8px;
+}
+
+.qr-skeleton {
+  width: 160px;
+  height: 160px;
+  background: #eee;
+  border-radius: 4px;
+  animation: qr-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes qr-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.qr-image {
+  width: 200px;
+  height: 200px;
+  border-radius: 6px;
+  border: 1px solid #e0e0e0;
+}
+
+.qr-actions {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+
+.qr-actions .btn {
+  flex: 1;
+}
+
+.qr-copy-btn {
+  color: #1a1a2e;
+  border: 1px solid #ddd;
+}
+
+.qr-copy-btn:hover {
+  background: #f0f0f0;
+  opacity: 1;
+}
+
+@media (max-width: 640px) {
+  .qr-preview {
+    width: 160px;
+    height: 160px;
+  }
+
+  .qr-image {
+    width: 160px;
+    height: 160px;
+  }
+
+  .qr-skeleton {
+    width: 130px;
+    height: 130px;
+  }
+
+  .qr-actions {
+    flex-direction: column;
+  }
+}

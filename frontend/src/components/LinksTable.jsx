@@ -3,9 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { deleteLink } from '../api/links.js';
 import EditLinkModal from './EditLinkModal.jsx';
+import QRCodeModal from './QRCodeModal.jsx';
 
 function LinksTable({ links, onRefresh }) {
   const [editingLink, setEditingLink] = useState(null);
+  const [qrLink, setQrLink] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
   const navigate = useNavigate();
 
@@ -61,6 +63,13 @@ function LinksTable({ links, onRefresh }) {
               <td>{new Date(link.createdAt).toLocaleDateString()}</td>
               <td className="actions-cell">
                 <button
+                  className="btn btn-sm btn-qr"
+                  onClick={() => setQrLink(link)}
+                  disabled={deletingId === link.id}
+                >
+                  QR
+                </button>
+                <button
                   className="btn btn-sm btn-analytics"
                   onClick={() => navigate(`/analytics/${link.id}`, { state: link })}
                   disabled={deletingId === link.id}
@@ -92,6 +101,13 @@ function LinksTable({ links, onRefresh }) {
           link={editingLink}
           onClose={() => setEditingLink(null)}
           onSaved={onRefresh}
+        />
+      )}
+
+      {qrLink && (
+        <QRCodeModal
+          link={qrLink}
+          onClose={() => setQrLink(null)}
         />
       )}
     </div>
