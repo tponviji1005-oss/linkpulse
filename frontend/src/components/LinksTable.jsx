@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { deleteLink } from '../api/links.js';
 import EditLinkModal from './EditLinkModal.jsx';
 
@@ -15,9 +16,10 @@ function LinksTable({ links, onRefresh }) {
     setDeletingId(link.id);
     try {
       await deleteLink(link.id);
+      toast.success('Link deleted');
       onRefresh();
     } catch (err) {
-      alert(err.message);
+      toast.error(err.message);
     } finally {
       setDeletingId(null);
     }
@@ -44,7 +46,7 @@ function LinksTable({ links, onRefresh }) {
             <tr key={link.id}>
               <td>
                 <a
-                  href={`http://localhost:5000/${link.shortCode}`}
+                  href={`${window.location.protocol}//${window.location.hostname}:5000/${link.shortCode}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="short-link"

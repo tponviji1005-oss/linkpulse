@@ -52,7 +52,13 @@ const register = async (req, res, next) => {
       },
     });
 
-    res.status(201).json({ user });
+    const token = jwt.sign(
+      { userId: user.id, email: user.email },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    res.status(201).json({ token, user });
   } catch (error) {
     next(error);
   }

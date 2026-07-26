@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { getLinkAnalytics } from '../api/links.js';
 
 const CATEGORY_ORDER = {
@@ -70,11 +71,11 @@ function Analytics() {
 
     async function fetchAnalytics() {
       try {
-        setError('');
         const result = await getLinkAnalytics(id);
         if (!cancelled) setData(result);
       } catch (err) {
         if (!cancelled) setError(err.message);
+        toast.error(err.message);
       } finally {
         if (!cancelled) setLoading(false);
       }

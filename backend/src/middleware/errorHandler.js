@@ -3,9 +3,12 @@ const errorHandler = (err, req, res, next) => {
 
   const statusCode = err.statusCode || 500;
 
-  res.status(statusCode).json({
-    error: err.message || "Internal Server Error",
-  });
+  const message =
+    process.env.NODE_ENV === "production"
+      ? "Internal Server Error"
+      : err.message || "Internal Server Error";
+
+  res.status(statusCode).json({ error: message });
 };
 
 module.exports = errorHandler;

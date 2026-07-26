@@ -1,21 +1,20 @@
 import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { getTopLinks } from '../api/links.js';
 
 function TopLinks() {
   const [links, setLinks] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
 
   useEffect(() => {
     let cancelled = false;
 
     async function fetchTopLinks() {
       try {
-        setError('');
         const data = await getTopLinks();
         if (!cancelled) setLinks(data.topLinks || []);
       } catch (err) {
-        if (!cancelled) setError(err.message);
+        toast.error(err.message);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -38,15 +37,6 @@ function TopLinks() {
     );
   }
 
-  if (error) {
-    return (
-      <div className="top-links-card">
-        <h2 className="top-links-title">Top Performing Links</h2>
-        <div className="error-msg">{error}</div>
-      </div>
-    );
-  }
-
   return (
     <div className="top-links-card">
       <h2 className="top-links-title">Top Performing Links</h2>
@@ -58,7 +48,7 @@ function TopLinks() {
             <li key={link.id} className="top-links-item">
               <div className="top-links-info">
                 <a
-                  href={`http://localhost:5000/${link.shortCode}`}
+                  href={`${window.location.protocol}//${window.location.hostname}:5000/${link.shortCode}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="short-link"

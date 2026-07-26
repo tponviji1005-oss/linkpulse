@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
+import toast from 'react-hot-toast';
 import { updateLink } from '../api/links.js';
 
 function EditLinkModal({ link, onClose, onSaved }) {
   const [originalUrl, setOriginalUrl] = useState(link.originalUrl);
   const [title, setTitle] = useState(link.title || '');
   const [isActive, setIsActive] = useState(link.isActive);
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const overlayRef = useRef(null);
 
@@ -23,7 +23,6 @@ function EditLinkModal({ link, onClose, onSaved }) {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    setError('');
     setLoading(true);
 
     try {
@@ -32,10 +31,11 @@ function EditLinkModal({ link, onClose, onSaved }) {
         title: title || undefined,
         isActive,
       });
+      toast.success('Link updated');
       onSaved();
       onClose();
     } catch (err) {
-      setError(err.message);
+      toast.error(err.message);
     } finally {
       setLoading(false);
     }
@@ -48,7 +48,6 @@ function EditLinkModal({ link, onClose, onSaved }) {
           <h2>Edit Link</h2>
           <button className="modal-close" onClick={onClose}>&times;</button>
         </div>
-        {error && <div className="error-msg">{error}</div>}
         <form onSubmit={handleSubmit} className="modal-form">
           <label className="modal-label">
             Original URL

@@ -172,10 +172,6 @@
   flex: 1;
 }
 
-.form-row .input-slug {
-  flex: 0 0 200px;
-}
-
 .form-row .btn {
   flex: 0 0 auto;
 }

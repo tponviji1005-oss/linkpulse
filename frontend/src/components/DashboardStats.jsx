@@ -1,21 +1,20 @@
 import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { getDashboard } from '../api/links.js';
 
 function DashboardStats() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
 
   useEffect(() => {
     let cancelled = false;
 
     async function fetchStats() {
       try {
-        setError('');
         const data = await getDashboard();
         if (!cancelled) setStats(data);
       } catch (err) {
-        if (!cancelled) setError(err.message);
+        toast.error(err.message);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -35,10 +34,6 @@ function DashboardStats() {
         ))}
       </div>
     );
-  }
-
-  if (error) {
-    return <div className="error-msg">{error}</div>;
   }
 
   if (!stats) return null;
