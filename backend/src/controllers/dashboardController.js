@@ -42,6 +42,8 @@ const getDashboardSummary = async (req, res, next) => {
         title: true,
         originalUrl: true,
         isActive: true,
+        expiresAt: true,
+        passwordHash: true,
         createdAt: true,
       },
     });
@@ -51,7 +53,11 @@ const getDashboardSummary = async (req, res, next) => {
       activeLinks,
       inactiveLinks,
       totalClicks,
-      recentLinks,
+      recentLinks: recentLinks.map((l) => ({
+        ...l,
+        hasPassword: !!l.passwordHash,
+        passwordHash: undefined,
+      })),
     };
 
     await setCache(cacheKey, payload, DASHBOARD_CACHE_TTL);
@@ -78,6 +84,8 @@ const getTopLinks = async (req, res, next) => {
         title: true,
         originalUrl: true,
         isActive: true,
+        expiresAt: true,
+        passwordHash: true,
         createdAt: true,
         _count: {
           select: { clicks: true },
@@ -95,6 +103,8 @@ const getTopLinks = async (req, res, next) => {
       title: link.title,
       originalUrl: link.originalUrl,
       isActive: link.isActive,
+      expiresAt: link.expiresAt,
+      hasPassword: !!link.passwordHash,
       createdAt: link.createdAt,
       clickCount: link._count.clicks,
     }));

@@ -4,15 +4,24 @@ import { createLink } from '../api/links.js';
 
 function CreateLinkForm({ onCreated }) {
   const [originalUrl, setOriginalUrl] = useState('');
+  const [password, setPassword] = useState('');
+  const [expiresAt, setExpiresAt] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showOptions, setShowOptions] = useState(false);
 
   async function handleSubmit(e) {
     e.preventDefault();
     setLoading(true);
 
     try {
-      await createLink(originalUrl);
+      await createLink(originalUrl, {
+        password: password || undefined,
+        expiresAt: expiresAt || undefined,
+      });
       setOriginalUrl('');
+      setPassword('');
+      setExpiresAt('');
+      setShowOptions(false);
       toast.success('Link created');
       onCreated();
     } catch (err) {
@@ -38,6 +47,36 @@ function CreateLinkForm({ onCreated }) {
           {loading ? 'Creating...' : 'Create'}
         </button>
       </div>
+      <button
+        type="button"
+        className="btn btn-sm btn-options-toggle"
+        onClick={() => setShowOptions(!showOptions)}
+      >
+        {showOptions ? 'Hide options' : 'Protection options'}
+      </button>
+      {showOptions && (
+        <div className="form-options">
+          <label className="form-option-label">
+            Expiration
+            <input
+              type="datetime-local"
+              value={expiresAt}
+              onChange={(e) => setExpiresAt(e.target.value)}
+              className="input"
+            />
+          </label>
+          <label className="form-option-label">
+            Password
+            <input
+              type="password"
+              placeholder="Optional password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="input"
+            />
+          </label>
+        </div>
+      )}
     </form>
   );
 }

@@ -1,4 +1,5 @@
 const QRCode = require("qrcode");
+const bcrypt = require("bcrypt");
 const { nanoid } = require("nanoid");
 const validator = require("validator");
 const UAParser = require("ua-parser-js");
@@ -7,9 +8,27 @@ const { getCache, setCache, invalidateCache } = require("../utils/cache");
 const { redirectKey, dashboardSummaryKey, topLinksKey } = require("../utils/cacheKeys");
 const { isBot } = require("../utils/botDetection");
 
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
+
+const SELECT_LINK_FIELDS = {
+  id: true,
+  shortCode: true,
+  originalUrl: true,
+  title: true,
+  isActive: true,
+  expiresAt: true,
+  createdAt: true,
+};
+
+function stripPasswordHash(link) {
+  if (!link) return link;
+  const { passwordHash, ...rest } = link;
+  return { ...rest, hasPassword: !!passwordHash };
+}
+
 const createLink = async (req, res, next) => {
   try {
-    const { originalUrl, title } = req.body;
+    const { originalUrl, title, expiresAt, password } = req.body;
 
     if (!originalUrl) {
       return res.status(400).json({ error: "originalUrl is required" });
@@ -17,6 +36,24 @@ const createLink = async (req, res, next) => {
 
     if (!validator.isURL(originalUrl)) {
       return res.status(400).json({ error: "Invalid URL format" });
+    }
+
+    if (expiresAt) {
+      const expiryDate = new Date(expiresAt);
+      if (isNaN(expiryDate.getTime())) {
+        return res.status(400).json({ error: "Invalid expiration date" });
+      }
+      if (expiryDate <= new Date()) {
+        return res.status(400).json({ error: "Expiration must be in the future" });
+      }
+    }
+
+    let passwordHash = null;
+    if (password) {
+      if (typeof password !== "string" || password.length < 1) {
+        return res.status(400).json({ error: "Password cannot be empty" });
+      }
+      passwordHash = await bcrypt.hash(password, 10);
     }
 
     const shortCode = nanoid(8);
@@ -27,20 +64,15 @@ const createLink = async (req, res, next) => {
         shortCode,
         title: title || null,
         userId: req.user.userId,
+        expiresAt: expiresAt ? new Date(expiresAt) : null,
+        passwordHash,
       },
-      select: {
-        id: true,
-        shortCode: true,
-        originalUrl: true,
-        title: true,
-        isActive: true,
-        createdAt: true,
-      },
+      select: SELECT_LINK_FIELDS,
     });
 
     res.status(201).json({
       message: "Short link created successfully",
-      link,
+      link: stripPasswordHash(link),
     });
 
     await invalidateCache(dashboardSummaryKey(req.user.userId), topLinksKey(req.user.userId));
@@ -55,17 +87,13 @@ const getMyLinks = async (req, res, next) => {
       where: { userId: req.user.userId },
       orderBy: { createdAt: "desc" },
       select: {
-        id: true,
-        shortCode: true,
-        originalUrl: true,
-        title: true,
-        isActive: true,
-        createdAt: true,
+        ...SELECT_LINK_FIELDS,
+        passwordHash: true,
         _count: { select: { clicks: true } },
       },
     });
 
-    res.status(200).json({ links });
+    res.status(200).json({ links: links.map(stripPasswordHash) });
   } catch (error) {
     next(error);
   }
@@ -79,13 +107,9 @@ const getLink = async (req, res, next) => {
         userId: req.user.userId,
       },
       select: {
-        id: true,
-        shortCode: true,
-        originalUrl: true,
-        title: true,
-        isActive: true,
-        createdAt: true,
+        ...SELECT_LINK_FIELDS,
         updatedAt: true,
+        passwordHash: true,
       },
     });
 
@@ -93,7 +117,7 @@ const getLink = async (req, res, next) => {
       return res.status(404).json({ error: "Link not found" });
     }
 
-    res.status(200).json({ link });
+    res.status(200).json({ link: stripPasswordHash(link) });
   } catch (error) {
     next(error);
   }
@@ -101,7 +125,7 @@ const getLink = async (req, res, next) => {
 
 const updateLink = async (req, res, next) => {
   try {
-    const { originalUrl, title, isActive } = req.body;
+    const { originalUrl, title, isActive, expiresAt, password } = req.body;
 
     const existing = await prisma.link.findFirst({
       where: {
@@ -137,23 +161,45 @@ const updateLink = async (req, res, next) => {
       data.isActive = isActive;
     }
 
+    if (expiresAt !== undefined) {
+      if (expiresAt === null || expiresAt === "") {
+        data.expiresAt = null;
+      } else {
+        const expiryDate = new Date(expiresAt);
+        if (isNaN(expiryDate.getTime())) {
+          return res.status(400).json({ error: "Invalid expiration date" });
+        }
+        if (expiryDate <= new Date()) {
+          return res.status(400).json({ error: "Expiration must be in the future" });
+        }
+        data.expiresAt = expiryDate;
+      }
+    }
+
+    if (password !== undefined) {
+      if (password === null || password === "") {
+        data.passwordHash = null;
+      } else {
+        if (typeof password !== "string" || password.length < 1) {
+          return res.status(400).json({ error: "Password cannot be empty" });
+        }
+        data.passwordHash = await bcrypt.hash(password, 10);
+      }
+    }
+
     const link = await prisma.link.update({
       where: { id: existing.id },
       data,
       select: {
-        id: true,
-        shortCode: true,
-        originalUrl: true,
-        title: true,
-        isActive: true,
-        createdAt: true,
+        ...SELECT_LINK_FIELDS,
         updatedAt: true,
+        passwordHash: true,
       },
     });
 
     await invalidateCache(redirectKey(existing.shortCode));
 
-    res.status(200).json({ message: "Link updated successfully", link });
+    res.status(200).json({ message: "Link updated successfully", link: stripPasswordHash(link) });
 
     await invalidateCache(dashboardSummaryKey(req.user.userId), topLinksKey(req.user.userId));
   } catch (error) {
@@ -191,6 +237,8 @@ const deleteLink = async (req, res, next) => {
 /**
  * Resolves a short code to its original URL and redirects the visitor.
  * Only active links can be redirected; deactivated or deleted links return 404.
+ * Password-protected links redirect to the frontend password gate.
+ * Expired links return HTTP 410 Gone.
  * Click analytics (IP, browser, OS, device, referer) are recorded before
  * the redirect is issued so that every successful redirect is captured.
  *
@@ -215,11 +263,14 @@ const redirectLink = async (req, res, next) => {
         },
         select: {
           id: true,
+          shortCode: true,
           originalUrl: true,
+          expiresAt: true,
+          passwordHash: true,
         },
       });
 
-      if (link) {
+      if (link && !link.passwordHash && !link.expiresAt) {
         await setCache(cacheRedisKey, link, REDIRECT_CACHE_TTL);
       }
     }
@@ -228,17 +279,22 @@ const redirectLink = async (req, res, next) => {
       return res.status(404).json({ error: "Short link not found" });
     }
 
-    // Parse the User-Agent header to extract structured browser,
-    // OS, and device information for click analytics.
+    if (link.expiresAt && new Date(link.expiresAt) < new Date()) {
+      return res.status(410).json({ error: "This link has expired." });
+    }
+
+    if (link.passwordHash) {
+      return res.redirect(
+        `${FRONTEND_URL}/password-gate/${link.id}?shortCode=${encodeURIComponent(link.shortCode)}`
+      );
+    }
+
     const parser = new UAParser(req.headers["user-agent"]);
     const { browser, os, device } = parser.getResult();
     const browserName = browser.name || null;
     const osName = os.name || null;
     const deviceType = device.type || "desktop";
 
-    // Persist analytics before issuing the redirect. The click record
-    // must be written while we still have access to the request context
-    // (IP, headers); after res.redirect() the connection may close.
     const userAgent = req.get("user-agent") || null;
 
     const clickData = {
@@ -255,15 +311,57 @@ const redirectLink = async (req, res, next) => {
     try {
       await prisma.click.create({ data: clickData });
     } catch {
-      // Analytics failures are non-fatal in principle, but the current
-      // implementation surfaces a 500 so data-integrity issues are not
-      // silently swallowed during development and monitoring.
       return res.status(500).json({ error: "Failed to record click" });
     }
 
-    // Issue the redirect immediately after the click is recorded so the
-    // visitor reaches their destination with minimal added latency.
     res.redirect(link.originalUrl);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const verifyPassword = async (req, res, next) => {
+  try {
+    const { password } = req.body;
+
+    if (!password) {
+      return res.status(400).json({ error: "Password is required" });
+    }
+
+    const link = await prisma.link.findFirst({
+      where: { id: req.params.id },
+      select: {
+        id: true,
+        originalUrl: true,
+        isActive: true,
+        passwordHash: true,
+        expiresAt: true,
+      },
+    });
+
+    if (!link) {
+      return res.status(404).json({ error: "Link not found" });
+    }
+
+    if (!link.isActive) {
+      return res.status(404).json({ error: "Link not found" });
+    }
+
+    if (link.expiresAt && new Date(link.expiresAt) < new Date()) {
+      return res.status(410).json({ error: "This link has expired." });
+    }
+
+    if (!link.passwordHash) {
+      return res.status(400).json({ error: "This link does not require a password" });
+    }
+
+    const match = await bcrypt.compare(password, link.passwordHash);
+
+    if (!match) {
+      return res.status(401).json({ error: "Incorrect password" });
+    }
+
+    res.status(200).json({ success: true, redirectUrl: link.originalUrl });
   } catch (error) {
     next(error);
   }
@@ -350,4 +448,4 @@ const generateQRCode = async (req, res, next) => {
   }
 };
 
-module.exports = { createLink, getMyLinks, getLink, updateLink, deleteLink, redirectLink, getLinkAnalytics, generateQRCode };
+module.exports = { createLink, getMyLinks, getLink, updateLink, deleteLink, redirectLink, verifyPassword, getLinkAnalytics, generateQRCode };

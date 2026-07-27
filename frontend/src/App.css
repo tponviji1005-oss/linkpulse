@@ -693,3 +693,205 @@
     flex-direction: column;
   }
 }
+
+/* Link Protection Options */
+.btn-options-toggle {
+  background: none;
+  color: #888;
+  padding: 4px 0;
+  font-size: 13px;
+  margin-top: 8px;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-options-toggle:hover {
+  color: #4361ee;
+  opacity: 1;
+}
+
+.form-options {
+  display: flex;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.form-option-label {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #555;
+}
+
+.form-option-label .input {
+  font-size: 13px;
+  padding: 8px 10px;
+}
+
+/* Status Badges */
+.badge-group {
+  display: inline-flex;
+  gap: 4px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.badge {
+  display: inline-block;
+  padding: 2px 7px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.badge-protected {
+  background: #e8ecff;
+  color: #4361ee;
+}
+
+.badge-expiring {
+  background: #fff3e0;
+  color: #e67e22;
+}
+
+.badge-expired {
+  background: #fee;
+  color: #c00;
+}
+
+/* Password Gate Page */
+.gate-page {
+  display: flex;
+  justify-content: center;
+  padding-top: 48px;
+}
+
+.gate-card {
+  width: 100%;
+  max-width: 400px;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  padding: 32px 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.gate-icon {
+  font-size: 40px;
+  line-height: 1;
+}
+
+.gate-card h2 {
+  font-size: 18px;
+  color: #1a1a2e;
+  margin: 0;
+}
+
+.gate-shortcode {
+  font-size: 14px;
+  font-weight: 600;
+  color: #4361ee;
+  margin: 0;
+}
+
+.gate-original {
+  font-size: 12px;
+  color: #888;
+  margin: 0;
+  word-break: break-all;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gate-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.gate-back {
+  margin-top: 8px;
+  font-size: 13px;
+  padding: 0;
+  background: none;
+  border: none;
+  color: #4361ee;
+  cursor: pointer;
+}
+
+.gate-back:hover {
+  opacity: 0.7;
+  text-decoration: underline;
+}
+
+.gate-loading {
+  padding: 32px;
+  color: #888;
+  font-size: 14px;
+}
+
+/* Edit Modal Extras */
+.modal-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.modal-checkbox-row input {
+  width: 16px;
+  height: 16px;
+}
+
+.modal-checkbox-row label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #555;
+}
+
+.modal-hint {
+  font-size: 12px;
+  color: #888;
+  font-weight: 400;
+}
+
+.btn-link {
+  background: none;
+  border: none;
+  color: #4361ee;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 0;
+  text-decoration: underline;
+}
+
+.btn-link:hover {
+  color: #2d4ad4;
+}
+
+@media (max-width: 640px) {
+  .form-options {
+    flex-direction: column;
+  }
+
+  .gate-card {
+    margin: 0 16px;
+    padding: 24px 20px;
+  }
+
+  .badge {
+    font-size: 10px;
+    padding: 1px 5px;
+  }
+}

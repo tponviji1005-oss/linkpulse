@@ -12,10 +12,14 @@ export async function getLinks() {
   return request('/api/links');
 }
 
-export async function createLink(originalUrl) {
+export async function createLink(originalUrl, options = {}) {
+  const body = { originalUrl };
+  if (options.expiresAt) body.expiresAt = options.expiresAt;
+  if (options.password) body.password = options.password;
+
   return request('/api/links', {
     method: 'POST',
-    body: JSON.stringify({ originalUrl }),
+    body: JSON.stringify(body),
   });
 }
 
@@ -38,4 +42,11 @@ export async function getLinkAnalytics(id) {
 
 export async function getLinkQRCode(id) {
   return requestBlob(`/api/links/${id}/qrcode`);
+}
+
+export async function verifyPassword(id, password) {
+  return request(`/api/links/${id}/verify-password`, {
+    method: 'POST',
+    body: JSON.stringify({ password }),
+  });
 }

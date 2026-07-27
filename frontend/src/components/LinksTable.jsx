@@ -5,6 +5,24 @@ import { deleteLink } from '../api/links.js';
 import EditLinkModal from './EditLinkModal.jsx';
 import QRCodeModal from './QRCodeModal.jsx';
 
+function StatusBadges({ link }) {
+  const isExpired = link.expiresAt && new Date(link.expiresAt) < new Date();
+  const badges = [];
+
+  if (link.hasPassword) {
+    badges.push(<span key="pw" className="badge badge-protected">&#128274; Protected</span>);
+  }
+  if (link.expiresAt) {
+    if (isExpired) {
+      badges.push(<span key="exp" className="badge badge-expired">&#9200; Expired</span>);
+    } else {
+      badges.push(<span key="exp" className="badge badge-expiring">&#9200; Expiring</span>);
+    }
+  }
+
+  return badges.length > 0 ? <span className="badge-group">{badges}</span> : null;
+}
+
 function LinksTable({ links, onRefresh }) {
   const [editingLink, setEditingLink] = useState(null);
   const [qrLink, setQrLink] = useState(null);
@@ -55,6 +73,7 @@ function LinksTable({ links, onRefresh }) {
                 >
                   /{link.shortCode}
                 </a>
+                <StatusBadges link={link} />
               </td>
               <td className="original-url" title={link.originalUrl}>
                 {link.originalUrl}

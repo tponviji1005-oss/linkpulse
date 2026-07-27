@@ -5,6 +5,7 @@ import Login from './pages/Login.jsx';
 import Register from './pages/Register.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import Analytics from './pages/Analytics.jsx';
+import PasswordGate from './pages/PasswordGate.jsx';
 import './App.css';
 
 function ProtectedRoute({ children }) {
@@ -42,6 +43,10 @@ function App() {
             <Route
               path="/analytics/:id"
               element={<ProtectedRoute><Analytics /></ProtectedRoute>}
+            />
+            <Route
+              path="/password-gate/:id"
+              element={<PasswordGate />}
             />
           </Routes>
         </main>
