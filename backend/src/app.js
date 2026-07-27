@@ -1,22 +1,24 @@
-const express = require("express");
-const cors = require("cors");
-const helmet = require("helmet");
-const morgan = require("morgan");
-const rateLimit = require("express-rate-limit");
+const express = require('express');
+const cors = require('cors');
+const helmet = require('helmet');
+const morgan = require('morgan');
+const rateLimit = require('express-rate-limit');
 
-const redis = require("./config/redis");
-const routes = require("./routes");
-const errorHandler = require("./middleware/errorHandler");
-const { redirectLink } = require("./controllers/linkController");
+const redis = require('./config/redis');
+const routes = require('./routes');
+const errorHandler = require('./middleware/errorHandler');
+const { redirectLink } = require('./controllers/linkController');
 
 const app = express();
+
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 
 const authLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 10,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: "Too many requests, please try again later" },
+  message: { error: 'Too many requests, please try again later' },
 });
 
 const redirectLimiter = rateLimit({
@@ -24,34 +26,46 @@ const redirectLimiter = rateLimit({
   max: 30,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: "Too many requests, please try again later" },
+  message: { error: 'Too many requests, please try again later' },
+});
+
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests, please try again later' },
 });
 
 app.use(helmet());
-app.use(morgan("dev"));
-// TODO: Restrict cors origin to frontend URL once frontend is built
-app.use(cors());
-app.use(express.json());
+app.use(morgan('dev'));
+app.use(cors({
+  origin: FRONTEND_URL,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
+app.use(express.json({ limit: '1mb' }));
 
-app.use("/api/auth", authLimiter);
-app.use("/api", routes);
+app.use('/api/auth', authLimiter);
+app.use('/api', apiLimiter, routes);
 
-app.get("/health", (req, res) => {
-  const redisStatus = redis ? redis.status : "not configured";
-  res.json({ status: "ok", uptime: process.uptime(), redis: redisStatus });
+app.get('/health', (req, res) => {
+  const redisStatus = redis ? redis.status : 'not configured';
+  res.json({ status: 'ok', uptime: process.uptime(), redis: redisStatus });
 });
 
-app.get("/", (req, res) => {
-  res.json({ message: "LinkPulse API running 🚀" });
+app.get('/', (req, res) => {
+  res.json({ message: 'LinkPulse API running' });
 });
 
-app.get("/:shortCode", redirectLimiter, redirectLink);
+app.get('/:shortCode', redirectLimiter, redirectLink);
 
 app.use(errorHandler);
 
 if (redis) {
   const shutdown = async (signal) => {
-    console.log(`${signal} received — closing Redis connection`);
+    console.log(`${signal} received - closing Redis connection`);
     try {
       await redis.quit();
     } catch {
@@ -60,8 +74,8 @@ if (redis) {
     process.exit(0);
   };
 
-  process.on("SIGTERM", () => shutdown("SIGTERM"));
-  process.on("SIGINT", () => shutdown("SIGINT"));
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
 }
 
 module.exports = app;

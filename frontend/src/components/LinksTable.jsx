@@ -23,7 +23,7 @@ function StatusBadges({ link }) {
   return badges.length > 0 ? <span className="badge-group">{badges}</span> : null;
 }
 
-function LinksTable({ links, onRefresh }) {
+function LinksTable({ links, onRefresh, loading, selectedIds, onSelect, onSelectAll }) {
   const [editingLink, setEditingLink] = useState(null);
   const [qrLink, setQrLink] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
@@ -45,15 +45,50 @@ function LinksTable({ links, onRefresh }) {
     }
   }
 
-  if (!links.length) {
-    return <p className="empty-msg">No links yet. Create your first short link above.</p>;
+  if (loading) {
+    return (
+      <div className="table-skeleton">
+        {[1, 2, 3, 4, 5].map((i) => (
+          <div key={i} className="table-skeleton-row">
+            <div className="skeleton" style={{ width: '20%' }} />
+            <div className="skeleton" style={{ width: '35%' }} />
+            <div className="skeleton" style={{ width: '10%' }} />
+            <div className="skeleton" style={{ width: '15%' }} />
+            <div className="skeleton" style={{ width: '20%' }} />
+          </div>
+        ))}
+      </div>
+    );
   }
+
+  if (!links.length) {
+    return (
+      <div className="empty-state">
+        <div className="empty-state-icon">&#128279;</div>
+        <h3>No links found</h3>
+        <p>Create your first short link above, or adjust your filters.</p>
+      </div>
+    );
+  }
+
+  const allSelected = selectedIds && selectedIds.length === links.length && links.length > 0;
+  const someSelected = selectedIds && selectedIds.length > 0 && selectedIds.length < links.length;
 
   return (
     <div className="links-table-wrap">
       <table className="links-table">
         <thead>
           <tr>
+            {selectedIds !== undefined && (
+              <th className="links-table-th-check">
+                <input
+                  type="checkbox"
+                  checked={allSelected}
+                  ref={(el) => { if (el) el.indeterminate = someSelected; }}
+                  onChange={onSelectAll}
+                />
+              </th>
+            )}
             <th>Short URL</th>
             <th>Original URL</th>
             <th>Clicks</th>
@@ -63,7 +98,16 @@ function LinksTable({ links, onRefresh }) {
         </thead>
         <tbody>
           {links.map((link) => (
-            <tr key={link.id}>
+            <tr key={link.id} className={selectedIds?.includes(link.id) ? 'row-selected' : ''}>
+              {selectedIds !== undefined && (
+                <td className="links-table-td-check">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.includes(link.id)}
+                    onChange={() => onSelect(link.id)}
+                  />
+                </td>
+              )}
               <td>
                 <a
                   href={`${window.location.protocol}//${window.location.hostname}:5000/${link.shortCode}`}

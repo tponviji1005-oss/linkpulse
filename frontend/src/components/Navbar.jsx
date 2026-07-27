@@ -10,6 +10,8 @@ function Navbar() {
       <div className="navbar-links">
         {user ? (
           <>
+            <Link to="/dashboard" className="nav-link">Dashboard</Link>
+            <Link to="/bulk" className="nav-link">Bulk</Link>
             <span className="navbar-user">{user.name || user.email}</span>
             <button onClick={logout} className="btn btn-outline">Logout</button>
           </>

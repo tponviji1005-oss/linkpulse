@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { getLinks, verifyPassword } from '../api/links.js';
+import { verifyPassword } from '../api/links.js';
 
 function PasswordGate() {
   const { id } = useParams();
@@ -11,28 +11,6 @@ function PasswordGate() {
 
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [linkInfo, setLinkInfo] = useState(null);
-  const [fetching, setFetching] = useState(true);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function fetchLinkInfo() {
-      try {
-        const data = await getLinks();
-        const links = Array.isArray(data) ? data : data.links || [];
-        const found = links.find((l) => l.id === id);
-        if (!cancelled && found) setLinkInfo(found);
-      } catch {
-        // Not logged in or link not found — continue anyway
-      } finally {
-        if (!cancelled) setFetching(false);
-      }
-    }
-
-    fetchLinkInfo();
-    return () => { cancelled = true; };
-  }, [id]);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -49,16 +27,6 @@ function PasswordGate() {
     }
   }
 
-  if (fetching) {
-    return (
-      <div className="gate-page">
-        <div className="gate-card">
-          <div className="gate-loading">Loading...</div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="gate-page">
       <div className="gate-card">
@@ -66,11 +34,6 @@ function PasswordGate() {
         <h2>This link is password-protected</h2>
         {shortCode && (
           <p className="gate-shortcode">/{shortCode}</p>
-        )}
-        {linkInfo && (
-          <p className="gate-original" title={linkInfo.originalUrl}>
-            {linkInfo.originalUrl}
-          </p>
         )}
         <form onSubmit={handleSubmit} className="gate-form">
           <input
