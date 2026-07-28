@@ -17,7 +17,25 @@ function BulkManagement() {
     setDragOver(false);
     const file = e.dataTransfer.files[0];
     if (file && file.name.endsWith('.csv')) {
-      handleFileUpload(file);
+      setUploading(true);
+      setResult(null);
+      setUploadProgress('Uploading file...');
+      csvUpload(file)
+        .then((data) => {
+          setResult(data);
+          if (data.totalFailed > 0) {
+            toast.success(`Imported ${data.totalCreated} links, ${data.totalFailed} failed`);
+          } else {
+            toast.success(`Successfully imported ${data.totalCreated} links`);
+          }
+        })
+        .catch((err) => {
+          toast.error(err.message);
+        })
+        .finally(() => {
+          setUploading(false);
+          setUploadProgress('');
+        });
     } else {
       toast.error('Please upload a CSV file');
     }

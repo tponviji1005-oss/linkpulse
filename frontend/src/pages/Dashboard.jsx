@@ -20,7 +20,6 @@ function Dashboard() {
   const [page, setPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState([]);
   const [confirmDialog, setConfirmDialog] = useState(null);
-  const [_bulkLoading, setBulkLoading] = useState(false);
 
   const fetchLinks = useCallback(async () => {
     setLoading(true);
@@ -90,7 +89,6 @@ function Dashboard() {
         confirmLabel: 'Delete',
         danger: true,
         action: async () => {
-          setBulkLoading(true);
           try {
             await bulkDelete(selectedIds);
             toast.success(`${selectedIds.length} links deleted`);
@@ -98,8 +96,6 @@ function Dashboard() {
             fetchLinks();
           } catch (err) {
             toast.error(err.message);
-          } finally {
-            setBulkLoading(false);
           }
         },
       },
@@ -109,7 +105,6 @@ function Dashboard() {
         confirmLabel: 'Activate',
         danger: false,
         action: async () => {
-          setBulkLoading(true);
           try {
             await bulkActivate(selectedIds);
             toast.success(`${selectedIds.length} links activated`);
@@ -117,8 +112,6 @@ function Dashboard() {
             fetchLinks();
           } catch (err) {
             toast.error(err.message);
-          } finally {
-            setBulkLoading(false);
           }
         },
       },
@@ -128,7 +121,6 @@ function Dashboard() {
         confirmLabel: 'Deactivate',
         danger: false,
         action: async () => {
-          setBulkLoading(true);
           try {
             await bulkDeactivate(selectedIds);
             toast.success(`${selectedIds.length} links deactivated`);
@@ -136,8 +128,6 @@ function Dashboard() {
             fetchLinks();
           } catch (err) {
             toast.error(err.message);
-          } finally {
-            setBulkLoading(false);
           }
         },
       },

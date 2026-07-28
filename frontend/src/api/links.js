@@ -69,6 +69,8 @@ export async function bulkCreateLinks(links) {
   });
 }
 
+import { BASE_URL } from './client.js';
+
 export async function csvUpload(file) {
   const formData = new FormData();
   formData.append('file', file);
@@ -77,7 +79,7 @@ export async function csvUpload(file) {
   const headers = {};
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  const res = await fetch('http://localhost:5000/api/bulk/csv', {
+  const res = await fetch(`${BASE_URL}/api/bulk/csv`, {
     method: 'POST',
     headers,
     body: formData,
@@ -95,7 +97,7 @@ export async function exportCSV() {
   const headers = {};
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  const res = await fetch('http://localhost:5000/api/bulk/export', { headers });
+  const res = await fetch(`${BASE_URL}/api/bulk/export`, { headers });
 
   if (!res.ok) {
     const data = await res.json();

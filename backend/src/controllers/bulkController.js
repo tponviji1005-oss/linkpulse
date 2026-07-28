@@ -1,4 +1,3 @@
-const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcrypt');
 const { nanoid } = require('nanoid');
 const validator = require('validator');
@@ -220,7 +219,7 @@ const exportCSV = async (req, res, next) => {
 
     const rows = links.map((link) => ({
       shortCode: link.shortCode,
-      url: `http://localhost:5000/${link.shortCode}`,
+      url: `${process.env.BACKEND_URL || 'http://localhost:5000'}/${link.shortCode}`,
       originalUrl: link.originalUrl,
       title: link.title || '',
       isActive: link.isActive,

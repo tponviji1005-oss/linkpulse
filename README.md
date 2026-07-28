@@ -1,205 +1,258 @@
 # LinkPulse
 
-A production-ready Smart URL Shortener and Link Intelligence Platform with advanced analytics, bulk management, and a polished UI.
+A modern, full-stack URL shortener with real-time analytics, bulk management, and advanced link features.
+
+[![CI](https://github.com/your-username/linkpulse/actions/workflows/ci.yml/badge.svg)](https://github.com/your-username/linkpulse/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Node.js](https://img.shields.io/badge/Node.js-18%2B-green.svg)](https://nodejs.org)
+[![React](https://img.shields.io/badge/React-19-61DAFB.svg)](https://react.dev)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+
+---
 
 ## Features
 
 ### Core
-- **JWT Authentication** - Register and log in with secure token-based sessions
-- **Link CRUD** - Create, read, update, and delete shortened links
-- **Redirect Engine** - Fast short-code resolution with click tracking
-- **Dashboard** - Overview of total links, clicks, active/inactive counts, and recent activity
-- **QR Code Generation** - Server-generated QR codes with download and copy functionality
-- **Password Protected Links** - Optional password gate for sensitive URLs
-- **Link Expiration** - Auto-expiring links with HTTP 410 responses
-- **Redis Caching** - Optional caching layer with graceful degradation
+- **URL Shortening** - Generate short links with nanoid (8-char codes)
+- **QR Code Generation** - Download QR codes for any short link
+- **Password Protection** - Gate links behind a password
+- **Link Expiration** - Set auto-expiry dates on links
+- **Smart Redirects** - Fast redirect with browser/OS/device tracking
 
-### Advanced Analytics (Bitly-style)
-- **KPI Cards** - Total clicks, unique visitors, human vs bot counts
-- **Click Trends** - Daily, weekly, and monthly click line/bar charts
-- **Hourly Heatmap** - 24-hour click distribution visualization
-- **Browser/OS/Device Breakdown** - Pie charts for audience segmentation
-- **Referrer & Country Lists** - Top traffic sources and geographic data
-- **Bot vs Human Comparison** - Automated traffic analysis
-- **Protected vs Public Comparison** - Click distribution by protection type
-- **Time Period Filters** - Today, 7d, 30d, 90d, All Time
+### Analytics
+- **Real-time Dashboard** - Total links, active count, click totals, recent links
+- **Top Performing Links** - See your best-performing short links at a glance
+- **Advanced Analytics** - Daily/weekly/monthly trends, browser/OS/device/referrer breakdowns
+- **Hourly Heatmap** - Visualize when your links get the most traffic
+- **Bot Detection** - Filter out bot clicks from human engagement metrics
+- **Time Period Filtering** - Today, 7 days, 30 days, 90 days, or all-time
 
-### Bulk Management
-- **CSV Upload** - Drag-and-drop CSV import with validation
-- **Bulk Create** - Paste multiple URLs for batch shortening
-- **CSV Export** - Download all links as CSV
-- **Bulk Delete** - Select and delete multiple links
-- **Bulk Activate/Deactivate** - Toggle link status in bulk
-- **Failed Row Reporting** - Download error details as CSV
-
-### Search & Filter System
-- **Search** - Search by URL, short code, or title
-- **Status Filters** - Active, Inactive, Protected, Public, Expired
-- **Sort Options** - Newest, Oldest, Most Clicked, Least Clicked
-- **Pagination** - Server-side paginated results
-
-### User Experience
-- **Toast Notifications** - Success and error feedback
-- **Loading Skeletons** - Professional loading states
-- **Confirmation Dialogs** - Safe destructive action confirmations
-- **Responsive Layout** - Fully responsive across all devices
-- **Smooth Transitions** - CSS animations and transitions
-- **Keyboard Accessibility** - Escape to close modals, focus management
+### Management
+- **Search & Filter** - Search by URL/short code/title, filter by status, sort multiple ways
+- **Pagination** - Server-side pagination for large link collections
+- **Bulk Operations** - Create, delete, activate, or deactivate multiple links at once
+- **CSV Import/Export** - Upload CSV files to bulk-create links, or export all links as CSV
+- **Bulk Text Create** - Paste multiple URLs (one per line) to create links instantly
 
 ### Security
-- **Rate Limiting** - Auth, API, and redirect rate limits
-- **CORS Configuration** - Restricted to frontend origin
-- **Security Headers** - Helmet.js integration
-- **Input Validation** - Server-side URL, email, and data validation
-- **Bot Detection** - Known bot user-agent filtering
-- **JWT Expiration** - 7-day token lifetime
+- **JWT Authentication** - Secure login with 7-day token expiry
+- **bcrypt Password Hashing** - Cost factor of 10
+- **Rate Limiting** - Auth: 10/min, API: 120/min, Redirects: 30/min
+- **Helmet Headers** - HTTP security headers enabled
+- **Input Validation** - All inputs validated with validator.js
+- **SQL Injection Prevention** - Prisma ORM parameterized queries
+
+### UX
+- **Responsive Design** - Works on desktop, tablet, and mobile
+- **Loading Skeletons** - Smooth loading states for all data views
+- **Toast Notifications** - Non-intrusive success/error messages
+- **Confirmation Dialogs** - Destructive actions require confirmation
+
+---
+
+## Screenshots
+
+> Add screenshots of the dashboard, analytics, and bulk management pages here.
+
+| Dashboard | Analytics | Bulk Management |
+|-----------|-----------|-----------------|
+| ![Dashboard](docs/screenshots/dashboard.png) | ![Analytics](docs/screenshots/analytics.png) | ![Bulk](docs/screenshots/bulk.png) |
+
+---
 
 ## Tech Stack
 
 | Layer | Technology |
-|---|---|
-| Frontend | React 19, React Router, Vite, Recharts, react-hot-toast |
-| Backend | Node.js, Express, Prisma ORM |
-| Database | PostgreSQL (Neon serverless driver adapter) |
-| Cache | Redis (ioredis) |
-| Auth | JWT (jsonwebtoken) + bcrypt |
-| CSV | csv-parse + csv-stringify |
-| Upload | multer (memory storage) |
-| Charts | Recharts (line, bar, pie, heatmap) |
+|-------|------------|
+| **Frontend** | React 19, React Router, Vite, Recharts, react-hot-toast |
+| **Backend** | Node.js, Express.js, Prisma ORM, ioredis |
+| **Database** | PostgreSQL (via Prisma + PrismaPg adapter) |
+| **Cache** | Redis (ioredis, optional - gracefully degrades) |
+| **Security** | Helmet, CORS, bcrypt, JWT, express-rate-limit |
+| **DevOps** | Docker, Docker Compose, GitHub Actions CI |
 
-## Architecture
+---
+
+## Getting Started
+
+### Prerequisites
+- Node.js 18+
+- PostgreSQL database (local or cloud like Neon)
+- Redis (optional, for caching)
+
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/your-username/linkpulse.git
+cd linkpulse
+
+# Install backend dependencies
+cd backend
+cp .env.example .env   # Edit with your database credentials
+npm install
+npx prisma migrate dev
+npx prisma generate
+
+# Install frontend dependencies
+cd ../frontend
+npm install
+```
+
+### Development
+
+```bash
+# Terminal 1 - Backend (port 5000)
+cd backend
+npm run dev
+
+# Terminal 2 - Frontend (port 5173)
+cd frontend
+npm run dev
+```
+
+### Docker
+
+```bash
+# Start all services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop
+docker-compose down
+```
+
+### Environment Variables
+
+**Backend** (`backend/.env`):
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `DATABASE_URL` | Yes | PostgreSQL connection string |
+| `JWT_SECRET` | Yes | Secret for JWT signing |
+| `REDIS_URL` | No | Redis connection string (caching disabled without it) |
+| `FRONTEND_URL` | No | Frontend URL for CORS (default: http://localhost:5173) |
+| `PORT` | No | Server port (default: 5000) |
+| `NODE_ENV` | No | Environment: development/production |
+| `BACKEND_URL` | No | Backend URL for CSV export links |
+
+**Frontend** (`frontend/.env`):
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `VITE_API_URL` | No | Backend API URL (default: http://localhost:5000) |
+
+---
+
+## API Reference
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/auth/register` | Register a new user |
+| POST | `/api/auth/login` | Login and get JWT token |
+| GET | `/api/auth/profile` | Get current user profile |
+| POST | `/api/links` | Create a short link |
+| GET | `/api/links` | List links (search, filter, paginate) |
+| GET | `/api/links/:id` | Get a single link |
+| PUT | `/api/links/:id` | Update a link |
+| DELETE | `/api/links/:id` | Delete a link |
+| GET | `/api/links/:id/analytics` | Get basic link analytics |
+| GET | `/api/links/:id/qrcode` | Get QR code image |
+| POST | `/api/links/:id/verify-password` | Verify link password |
+| GET | `/api/dashboard` | Dashboard summary stats |
+| GET | `/api/dashboard/top-links` | Top 5 performing links |
+| GET | `/api/analytics/:id` | Advanced analytics with period filter |
+| POST | `/api/bulk` | Bulk create links |
+| POST | `/api/bulk/csv` | Upload CSV to create links |
+| GET | `/api/bulk/export` | Export all links as CSV |
+| DELETE | `/api/bulk` | Bulk delete links |
+| PUT | `/api/bulk/activate` | Bulk activate links |
+| PUT | `/api/bulk/deactivate` | Bulk deactivate links |
+| GET | `/:shortCode` | Redirect to original URL |
+
+Full API documentation: [docs/api.md](docs/api.md)
+
+---
+
+## Project Structure
 
 ```
 linkpulse/
 ├── backend/
 │   ├── src/
-│   │   ├── config/          # Prisma and Redis configuration
-│   │   ├── controllers/     # Auth, link, dashboard, analytics, bulk controllers
-│   │   ├── middleware/       # JWT auth and error handling
-│   │   ├── routes/          # API route definitions
-│   │   └── utils/           # Cache, pagination, CSV helpers, bot detection
-│   ├── prisma/              # Schema and migrations
-│   └── server.js            # Entry point
+│   │   ├── config/          # Prisma, Redis clients
+│   │   ├── controllers/     # Route handlers
+│   │   ├── middleware/       # Error handler
+│   │   ├── routes/          # Express route definitions
+│   │   ├── utils/           # Cache, pagination, bot detection, CSV helpers
+│   │   └── app.js           # Express app setup
+│   ├── prisma/
+│   │   └── schema.prisma    # Database schema
+│   ├── Dockerfile
+│   └── package.json
 ├── frontend/
-│   └── src/
-│       ├── api/             # HTTP client and API functions
-│       ├── components/      # Reusable UI components
-│       ├── context/         # Auth context provider
-│       └── pages/           # Login, Register, Dashboard, Analytics, Bulk
-└── docs/
+│   ├── src/
+│   │   ├── api/             # API client layer
+│   │   ├── components/      # Reusable UI components
+│   │   ├── context/         # Auth context
+│   │   ├── pages/           # Route pages
+│   │   ├── App.jsx          # Router setup
+│   │   └── App.css          # All styles
+│   ├── Dockerfile
+│   └── package.json
+├── docs/                    # Documentation
+├── .github/                 # CI, issue/PR templates
+├── docker-compose.yml
+├── CONTRIBUTING.md
+├── CHANGELOG.md
+├── SECURITY.md
+├── CODE_OF_CONDUCT.md
+└── SUPPORTED_VERSIONS.md
 ```
 
-## Getting Started
+---
 
-### Prerequisites
+## Roadmap
 
-- Node.js >= 18.0.0
-- npm >= 9.0.0
-- PostgreSQL (or a hosted instance like Neon)
-- Redis (optional - caching is disabled if Redis is unavailable)
+### Completed
+- [x] JWT Authentication (register, login, profile)
+- [x] URL shortening with nanoid
+- [x] QR code generation
+- [x] Password-protected links
+- [x] Link expiration
+- [x] Click tracking (browser, OS, device, referrer, bot detection)
+- [x] Dashboard with stats and top links
+- [x] Advanced analytics with Recharts
+- [x] Search, filter, sort, and pagination
+- [x] Bulk operations (create, delete, activate, deactivate)
+- [x] CSV import/export
+- [x] Responsive UI with loading states
+- [x] Redis caching with graceful degradation
+- [x] Docker & Docker Compose support
+- [x] GitHub Actions CI pipeline
+- [x] Full project documentation
 
-### Backend
+### Planned
+- [ ] Geographic analytics with GeoIP
+- [ ] Custom short codes (user-defined aliases)
+- [ ] Link tags and collections
+- [ ] Click timestamp heatmaps
+- [ ] API key authentication for programmatic access
+- [ ] Webhook integrations
+- [ ] Link scheduling (future activate/deactivate)
+- [ ] A/B testing for links
+- [ ] Batch analytics export
 
-```bash
-cd backend
-npm install
-cp .env.example .env
-# Edit .env with your DATABASE_URL, JWT_SECRET, and optional REDIS_URL
-npx prisma migrate deploy
-npm run dev
-```
+---
 
-### Frontend
+## Contributing
 
-```bash
-cd frontend
-npm install
-npm run dev
-```
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup instructions, coding conventions, and PR guidelines.
 
-The frontend runs on `http://localhost:5173` and expects the backend on `http://localhost:5000`.
-
-## Environment Variables
-
-| Variable | Description | Default |
-|---|---|---|
-| `PORT` | Server port | `5000` |
-| `NODE_ENV` | Environment (`development` / `production`) | `development` |
-| `DATABASE_URL` | PostgreSQL connection string | - |
-| `JWT_SECRET` | Secret for signing JWT tokens | - |
-| `REDIS_URL` | Redis connection URL (optional) | - |
-| `FRONTEND_URL` | Frontend URL for CORS | `http://localhost:5173` |
-
-## API Documentation
-
-### Authentication
-
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| `POST` | `/api/auth/register` | No | Register a new account |
-| `POST` | `/api/auth/login` | No | Log in and receive JWT |
-| `GET` | `/api/auth/profile` | JWT | Get current user profile |
-
-### Links
-
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| `POST` | `/api/links` | JWT | Create a short link |
-| `GET` | `/api/links` | JWT | List user's links (with search/filter/pagination) |
-| `GET` | `/api/links/:id` | JWT | Get single link |
-| `PUT` | `/api/links/:id` | JWT | Update a link |
-| `DELETE` | `/api/links/:id` | JWT | Delete a link |
-| `GET` | `/api/links/:id/analytics` | JWT | Get basic analytics |
-| `GET` | `/api/links/:id/qrcode` | JWT | Generate QR code PNG |
-| `POST` | `/api/links/:id/verify-password` | No | Verify password for protected link |
-
-#### Link Query Parameters
-
-| Parameter | Description | Values |
-|---|---|---|
-| `search` | Search URL, short code, or title | Any text |
-| `status` | Filter by status | `active`, `inactive`, `protected`, `public`, `expired` |
-| `sort` | Sort order | `newest`, `oldest`, `most_clicked`, `least_clicked` |
-| `page` | Page number | Number (default: 1) |
-| `limit` | Items per page | Number (default: 20, max: 100) |
-
-### Analytics
-
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| `GET` | `/api/analytics/:id` | JWT | Get advanced analytics |
-
-#### Analytics Query Parameters
-
-| Parameter | Description | Values |
-|---|---|---|
-| `period` | Time period | `today`, `7d`, `30d`, `90d`, `all` |
-
-### Bulk Management
-
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| `POST` | `/api/bulk` | JWT | Bulk create links |
-| `POST` | `/api/bulk/csv` | JWT | Upload CSV file |
-| `GET` | `/api/bulk/export` | JWT | Export links as CSV |
-| `DELETE` | `/api/bulk` | JWT | Bulk delete links |
-| `PUT` | `/api/bulk/activate` | JWT | Bulk activate links |
-| `PUT` | `/api/bulk/deactivate` | JWT | Bulk deactivate links |
-
-### Dashboard
-
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| `GET` | `/api/dashboard` | JWT | Dashboard summary |
-| `GET` | `/api/dashboard/top-links` | JWT | Top 5 links by clicks |
-
-### Other
-
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| `GET` | `/:shortCode` | No | Redirect to original URL |
-| `GET` | `/health` | No | Health check |
+---
 
 ## License
 
-MIT
+MIT License - see [LICENSE](LICENSE) for details.
+
+Copyright (c) 2026 Pon Vijayalakdhmi T
