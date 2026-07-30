@@ -40,22 +40,32 @@ model Link {
 }
 
 model Click {
-  id        String   @id @default(uuid()) @db.Uuid
-  linkId    String   @map("link_id") @db.Uuid
-  ipAddress String?  @map("ip_address") @db.VarChar(45)
-  userAgent String?  @map("user_agent") @db.Text
-  referer   String?  @db.Text
-  country   String?  @db.VarChar(2)
-  city      String?  @db.VarChar(100)
-  device    String?  @db.VarChar(20)
-  browser   String?  @db.VarChar(50)
-  os        String?  @db.VarChar(50)
-  isBot     Boolean  @default(false) @map("is_bot")
-  createdAt DateTime @default(now()) @map("created_at")
+  id              String   @id @default(uuid()) @db.Uuid
+  linkId          String   @map("link_id") @db.Uuid
+  ipAddress       String?  @map("ip_address") @db.VarChar(45)
+  userAgent       String?  @map("user_agent") @db.Text
+  referer         String?  @db.Text
+  country         String?  @db.VarChar(2)
+  city            String?  @db.VarChar(100)
+  device          String?  @db.VarChar(20)
+  browser         String?  @db.VarChar(50)
+  browserVersion  String?  @map("browser_version") @db.VarChar(20)
+  os              String?  @db.VarChar(50)
+  osVersion       String?  @map("os_version") @db.VarChar(20)
+  language        String?  @map("language") @db.VarChar(10)
+  latitude        Float?
+  longitude       Float?
+  region          String?  @db.VarChar(100)
+  state           String?  @db.VarChar(100)
+  timezone        String?  @db.VarChar(50)
+  isBot           Boolean  @default(false) @map("is_bot")
+  createdAt       DateTime @default(now()) @map("created_at")
 
   link Link @relation(fields: [linkId], references: [id], onDelete: Cascade)
 
   @@index([linkId])
   @@index([linkId, createdAt])
+  @@index([country])
+  @@index([createdAt])
   @@map("clicks")
 }

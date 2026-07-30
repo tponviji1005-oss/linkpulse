@@ -2,8 +2,9 @@ const bcrypt = require('bcrypt');
 const { nanoid } = require('nanoid');
 const validator = require('validator');
 const prisma = require('../config/prisma');
-const { getCache, setCache, invalidateCache } = require('../utils/cache');
-const { dashboardSummaryKey, topLinksKey, redirectKey } = require('../utils/cacheKeys');
+const { invalidateCache } = require('../utils/cache');
+const { dashboardSummaryKey, topLinksKey } = require('../utils/cacheKeys');
+const { deleteCachedLink } = require('../lib/redirectCache');
 const { parseCSV, generateCSV } = require('../utils/csvHelpers');
 const { invalidateLinkAnalytics } = require('./analyticsController');
 
@@ -264,8 +265,10 @@ const bulkDelete = async (req, res, next) => {
     await prisma.click.deleteMany({ where: { linkId: { in: linkIds } } });
     await prisma.link.deleteMany({ where: { id: { in: linkIds } } });
 
-    const cacheKeys = shortCodes.map((sc) => redirectKey(sc));
-    await invalidateCache(...cacheKeys, dashboardSummaryKey(req.user.userId), topLinksKey(req.user.userId));
+    for (const sc of shortCodes) {
+      await deleteCachedLink(sc);
+    }
+    await invalidateCache(dashboardSummaryKey(req.user.userId), topLinksKey(req.user.userId));
 
     for (const lid of linkIds) {
       await invalidateLinkAnalytics(lid);
@@ -323,8 +326,10 @@ const bulkDeactivate = async (req, res, next) => {
     });
 
     const shortCodes = links.map((l) => l.shortCode);
-    const cacheKeys = shortCodes.map((sc) => redirectKey(sc));
-    await invalidateCache(...cacheKeys, dashboardSummaryKey(req.user.userId), topLinksKey(req.user.userId));
+    for (const sc of shortCodes) {
+      await deleteCachedLink(sc);
+    }
+    await invalidateCache(dashboardSummaryKey(req.user.userId), topLinksKey(req.user.userId));
 
     res.status(200).json({
       message: `${result.count} links deactivated`,

@@ -67,7 +67,7 @@ A modern, full-stack URL shortener with real-time analytics, bulk management, an
 | **Frontend** | React 19, React Router, Vite, Recharts, react-hot-toast |
 | **Backend** | Node.js, Express.js, Prisma ORM, ioredis |
 | **Database** | PostgreSQL (via Prisma + PrismaPg adapter) |
-| **Cache** | Redis (ioredis, optional - gracefully degrades) |
+| **Cache** | Redis (ioredis, optional — gracefully degrades, managed via `lib/redis.js`) |
 | **Security** | Helmet, CORS, bcrypt, JWT, express-rate-limit |
 | **DevOps** | Docker, Docker Compose, GitHub Actions CI |
 
@@ -78,7 +78,29 @@ A modern, full-stack URL shortener with real-time analytics, bulk management, an
 ### Prerequisites
 - Node.js 18+
 - PostgreSQL database (local or cloud like Neon)
-- Redis (optional, for caching)
+- Redis (optional, for caching — server runs without it)
+
+### Redis Setup
+
+Redis is optional. The backend gracefully falls back to the database if Redis is unavailable.
+
+**Local Redis (Docker):**
+```bash
+docker run -d --name linkpulse-redis -p 6379:6379 redis:7-alpine
+```
+
+Or use Docker Compose (includes Redis):
+```bash
+docker-compose up -d
+```
+
+**Upstash Redis:**
+1. Create a Redis database at [upstash.com](https://upstash.com)
+2. Copy your `REDIS_URL` (starts with `rediss://`)
+3. Set it in `backend/.env`:
+```env
+REDIS_URL=rediss://default:your-password@your-region.upstash.io:6379
+```
 
 ### Installation
 
@@ -131,7 +153,10 @@ docker-compose down
 |----------|----------|-------------|
 | `DATABASE_URL` | Yes | PostgreSQL connection string |
 | `JWT_SECRET` | Yes | Secret for JWT signing |
-| `REDIS_URL` | No | Redis connection string (caching disabled without it) |
+| `REDIS_URL` | No | Redis connection URL (local or Upstash) |
+| `REDIS_HOST` | No | Redis host (alternative to REDIS_URL, default: localhost) |
+| `REDIS_PORT` | No | Redis port (default: 6379) |
+| `REDIS_PASSWORD` | No | Redis password |
 | `FRONTEND_URL` | No | Frontend URL for CORS (default: http://localhost:5173) |
 | `PORT` | No | Server port (default: 5000) |
 | `NODE_ENV` | No | Environment: development/production |
@@ -182,6 +207,7 @@ linkpulse/
 │   ├── src/
 │   │   ├── config/          # Prisma, Redis clients
 │   │   ├── controllers/     # Route handlers
+│   │   ├── lib/             # Redis, shared modules
 │   │   ├── middleware/       # Error handler
 │   │   ├── routes/          # Express route definitions
 │   │   ├── utils/           # Cache, pagination, bot detection, CSV helpers

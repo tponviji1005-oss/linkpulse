@@ -248,6 +248,20 @@ function Analytics() {
             </div>
           </ChartCard>
 
+          <ChartCard title="Monthly Trend" className="analytics-chart-full">
+            <div className="chart-container">
+              <ResponsiveContainer width="100%" height={250}>
+                <BarChart data={data.monthlyTrend}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                  <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
+                  <Tooltip />
+                  <Bar dataKey="clicks" fill="#7209b7" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </ChartCard>
+
           <ChartCard title="Hourly Distribution" className="analytics-chart-full">
             <HourlyHeatmap data={data.hourlyDistribution} />
           </ChartCard>

@@ -1,6 +1,7 @@
 const prisma = require('../config/prisma');
 const { getCache, setCache, invalidateCache } = require('../utils/cache');
 const { analyticsKey } = require('../utils/cacheKeys');
+const analyticsService = require('../services/analyticsService');
 
 const ANALYTICS_CACHE_TTL = 120;
 
@@ -31,6 +32,14 @@ function getDateRange(period) {
     default:
       return { start: new Date(0), end: now };
   }
+}
+
+async function verifyLinkOwnership(linkId, userId) {
+  const link = await prisma.link.findFirst({
+    where: { id: linkId, userId },
+    select: { id: true },
+  });
+  return link;
 }
 
 const getAdvancedAnalytics = async (req, res, next) => {
@@ -202,4 +211,82 @@ const invalidateLinkAnalytics = async (linkId) => {
   await invalidateCache(...keys);
 };
 
-module.exports = { getAdvancedAnalytics, invalidateLinkAnalytics };
+async function getOverview(req, res, next) {
+  try {
+    const link = await verifyLinkOwnership(req.params.linkId, req.user.userId);
+    if (!link) return res.status(404).json({ error: "Link not found" });
+
+    const period = req.query.period || "all";
+    const data = await analyticsService.getOverview({ linkId: req.params.linkId, period });
+    res.status(200).json(data);
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function getTimeline(req, res, next) {
+  try {
+    const link = await verifyLinkOwnership(req.params.linkId, req.user.userId);
+    if (!link) return res.status(404).json({ error: "Link not found" });
+
+    const period = req.query.period || "7d";
+    const data = await analyticsService.getTimeline({ linkId: req.params.linkId, period });
+    res.status(200).json(data);
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function getDevices(req, res, next) {
+  try {
+    const link = await verifyLinkOwnership(req.params.linkId, req.user.userId);
+    if (!link) return res.status(404).json({ error: "Link not found" });
+
+    const period = req.query.period || "all";
+    const data = await analyticsService.getDeviceBreakdown({ linkId: req.params.linkId, period });
+    res.status(200).json(data);
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function getBrowsers(req, res, next) {
+  try {
+    const link = await verifyLinkOwnership(req.params.linkId, req.user.userId);
+    if (!link) return res.status(404).json({ error: "Link not found" });
+
+    const period = req.query.period || "all";
+    const data = await analyticsService.getBrowserBreakdown({ linkId: req.params.linkId, period });
+    res.status(200).json(data);
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function getOS(req, res, next) {
+  try {
+    const link = await verifyLinkOwnership(req.params.linkId, req.user.userId);
+    if (!link) return res.status(404).json({ error: "Link not found" });
+
+    const period = req.query.period || "all";
+    const data = await analyticsService.getOSBreakdown({ linkId: req.params.linkId, period });
+    res.status(200).json(data);
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function getReferrers(req, res, next) {
+  try {
+    const link = await verifyLinkOwnership(req.params.linkId, req.user.userId);
+    if (!link) return res.status(404).json({ error: "Link not found" });
+
+    const period = req.query.period || "all";
+    const data = await analyticsService.getReferrerBreakdown({ linkId: req.params.linkId, period });
+    res.status(200).json(data);
+  } catch (error) {
+    next(error);
+  }
+}
+
+module.exports = { getAdvancedAnalytics, invalidateLinkAnalytics, getOverview, getTimeline, getDevices, getBrowsers, getOS, getReferrers };

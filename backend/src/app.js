@@ -3,6 +3,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
+const createRateLimiter = require('./middleware/rateLimiter');
 
 const redis = require('./config/redis');
 const routes = require('./routes');
@@ -13,25 +14,11 @@ const app = express();
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 
-const authLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 10,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'Too many requests, please try again later' },
-});
+const apiRateLimiter = createRateLimiter({ windowMs: 60 * 1000, max: 100 });
 
 const redirectLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 30,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'Too many requests, please try again later' },
-});
-
-const apiLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 120,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many requests, please try again later' },
@@ -47,8 +34,7 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '1mb' }));
 
-app.use('/api/auth', authLimiter);
-app.use('/api', apiLimiter, routes);
+app.use('/api', apiRateLimiter, routes);
 
 app.get('/health', (req, res) => {
   const redisStatus = redis ? redis.status : 'not configured';

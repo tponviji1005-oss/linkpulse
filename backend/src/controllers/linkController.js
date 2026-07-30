@@ -2,13 +2,13 @@ const QRCode = require('qrcode');
 const bcrypt = require('bcrypt');
 const { nanoid } = require('nanoid');
 const validator = require('validator');
-const UAParser = require('ua-parser-js');
 const prisma = require('../config/prisma');
-const { getCache, setCache, invalidateCache } = require('../utils/cache');
-const { redirectKey, dashboardSummaryKey, topLinksKey } = require('../utils/cacheKeys');
-const { isBot } = require('../utils/botDetection');
+const { invalidateCache } = require('../utils/cache');
+const { dashboardSummaryKey, topLinksKey } = require('../utils/cacheKeys');
+const { getCachedLink, setCachedLink, deleteCachedLink } = require('../lib/redirectCache');
 const { parsePagination, paginateResponse } = require('../utils/pagination');
 const { invalidateLinkAnalytics } = require('./analyticsController');
+const analyticsService = require('../services/analyticsService');
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 
@@ -241,7 +241,7 @@ const updateLink = async (req, res, next) => {
       },
     });
 
-    await invalidateCache(redirectKey(existing.shortCode));
+    await deleteCachedLink(existing.shortCode);
 
     res.status(200).json({ message: 'Link updated successfully', link: stripPasswordHash(link) });
 
@@ -267,7 +267,7 @@ const deleteLink = async (req, res, next) => {
     await prisma.click.deleteMany({ where: { linkId: existing.id } });
     await prisma.link.delete({ where: { id: existing.id } });
 
-    await invalidateCache(redirectKey(existing.shortCode));
+    await deleteCachedLink(existing.shortCode);
     await invalidateLinkAnalytics(existing.id);
 
     res.status(200).json({ message: 'Link deleted successfully' });
@@ -278,14 +278,11 @@ const deleteLink = async (req, res, next) => {
   }
 };
 
-const REDIRECT_CACHE_TTL = 3600;
-
 const redirectLink = async (req, res, next) => {
   try {
     const { shortCode } = req.params;
-    const cacheRedisKey = redirectKey(shortCode);
 
-    let link = await getCache(cacheRedisKey);
+    let link = await getCachedLink(shortCode);
 
     if (!link) {
       link = await prisma.link.findFirst({
@@ -302,8 +299,8 @@ const redirectLink = async (req, res, next) => {
         },
       });
 
-      if (link && !link.passwordHash && !link.expiresAt) {
-        await setCache(cacheRedisKey, link, REDIRECT_CACHE_TTL);
+      if (link) {
+        await setCachedLink(shortCode, link);
       }
     }
 
@@ -321,30 +318,10 @@ const redirectLink = async (req, res, next) => {
       );
     }
 
-    const parser = new UAParser(req.headers['user-agent']);
-    const { browser, os, device } = parser.getResult();
-    const browserName = browser.name || null;
-    const osName = os.name || null;
-    const deviceType = device.type || 'desktop';
-
-    const userAgent = req.get('user-agent') || null;
-
-    const clickData = {
-      linkId: link.id,
-      ipAddress: req.ip,
-      browser: browserName,
-      os: osName,
-      device: deviceType,
-      referer: req.get('referer') || null,
-      userAgent,
-      isBot: isBot(userAgent),
-    };
-
-    try {
-      await prisma.click.create({ data: clickData });
-    } catch {
-      return res.status(500).json({ error: 'Failed to record click' });
-    }
+    const isDev = () => process.env.NODE_ENV === 'development';
+    analyticsService.recordClick({ linkId: link.id, req }).catch((err) => {
+      if (isDev()) console.warn(`Click record error: ${err.message}`);
+    });
 
     res.redirect(link.originalUrl);
   } catch (error) {
@@ -392,6 +369,11 @@ const verifyPassword = async (req, res, next) => {
     if (!match) {
       return res.status(401).json({ error: 'Incorrect password' });
     }
+
+    const isDev = () => process.env.NODE_ENV === 'development';
+    analyticsService.recordClick({ linkId: link.id, req }).catch((err) => {
+      if (isDev()) console.warn(`Click record error: ${err.message}`);
+    });
 
     res.status(200).json({ success: true, redirectUrl: link.originalUrl });
   } catch (error) {
