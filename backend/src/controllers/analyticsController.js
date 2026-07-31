@@ -1,9 +1,21 @@
 const prisma = require('../config/prisma');
 const { getCache, setCache, invalidateCache } = require('../utils/cache');
 const { analyticsKey } = require('../utils/cacheKeys');
+const { isValidUUID } = require('../utils/uuid');
 const analyticsService = require('../services/analyticsService');
 
 const ANALYTICS_CACHE_TTL = 120;
+
+function getReferrerHostname(referer) {
+  if (!referer) return 'Direct';
+
+  try {
+    const url = new URL(referer);
+    return url.hostname || 'Direct';
+  } catch {
+    return 'Unknown';
+  }
+}
 
 function getDateRange(period) {
   const now = new Date();
@@ -45,11 +57,15 @@ async function verifyLinkOwnership(linkId, userId) {
 const getAdvancedAnalytics = async (req, res, next) => {
   try {
     const { id } = req.params;
+    if (!isValidUUID(id)) {
+      return res.status(400).json({ error: 'Invalid link ID format' });
+    }
+
     const period = req.query.period || 'all';
 
     const link = await prisma.link.findFirst({
       where: { id, userId: req.user.userId },
-      select: { id: true, shortCode: true, originalUrl: true, title: true, passwordHash: true, isActive: true, expiresAt: true },
+      select: { id: true, shortCode: true, originalUrl: true, title: true, passwordHash: true, isActive: true, expiresAt: true, isFlagged: true },
     });
 
     if (!link) {
@@ -83,8 +99,7 @@ const getAdvancedAnalytics = async (req, res, next) => {
     });
 
     const totalClicks = clicks.length;
-    const uniqueIps = new Set(clicks.map((c) => c.ipAddress).filter(Boolean));
-    const uniqueClicks = uniqueIps.size;
+    const uniqueIps = new Set();
 
     const browserBreakdown = {};
     const osBreakdown = {};
@@ -99,6 +114,14 @@ const getAdvancedAnalytics = async (req, res, next) => {
     let humanClicks = 0;
 
     for (const click of clicks) {
+      if (click.isBot) {
+        botClicks++;
+        continue;
+      }
+      humanClicks++;
+
+      uniqueIps.add(click.ipAddress);
+
       const browserName = click.browser || 'Unknown';
       browserBreakdown[browserName] = (browserBreakdown[browserName] || 0) + 1;
 
@@ -108,7 +131,7 @@ const getAdvancedAnalytics = async (req, res, next) => {
       const deviceType = click.device || 'Unknown';
       deviceBreakdown[deviceType] = (deviceBreakdown[deviceType] || 0) + 1;
 
-      const referrer = click.referer ? new URL(click.referer).hostname : 'Direct';
+      const referrer = getReferrerHostname(click.referer);
       referrerBreakdown[referrer] = (referrerBreakdown[referrer] || 0) + 1;
 
       if (click.country) {
@@ -128,13 +151,10 @@ const getAdvancedAnalytics = async (req, res, next) => {
 
       const hour = click.createdAt.getHours();
       hourlyDistribution[hour] = (hourlyDistribution[hour] || 0) + 1;
-
-      if (click.isBot) {
-        botClicks++;
-      } else {
-        humanClicks++;
-      }
     }
+
+    const uniqueClicks = uniqueIps.size;
+    const realClicks = humanClicks;
 
     const hasPassword = !!link.passwordHash;
     const protectedClicks = hasPassword ? totalClicks : 0;
@@ -175,6 +195,7 @@ const getAdvancedAnalytics = async (req, res, next) => {
         title: link.title,
         isActive: link.isActive,
         hasPassword,
+        isFlagged: link.isFlagged,
         expiresAt: link.expiresAt,
       },
       period,
@@ -191,6 +212,7 @@ const getAdvancedAnalytics = async (req, res, next) => {
       countryBreakdown: sortByValue(countryBreakdown),
       botClicks,
       humanClicks,
+      realClicks,
       protectedClicks,
       publicClicks,
       activeClicks,
@@ -213,6 +235,10 @@ const invalidateLinkAnalytics = async (linkId) => {
 
 async function getOverview(req, res, next) {
   try {
+    if (!isValidUUID(req.params.linkId)) {
+      return res.status(400).json({ error: 'Invalid link ID format' });
+    }
+
     const link = await verifyLinkOwnership(req.params.linkId, req.user.userId);
     if (!link) return res.status(404).json({ error: "Link not found" });
 
@@ -226,6 +252,10 @@ async function getOverview(req, res, next) {
 
 async function getTimeline(req, res, next) {
   try {
+    if (!isValidUUID(req.params.linkId)) {
+      return res.status(400).json({ error: 'Invalid link ID format' });
+    }
+
     const link = await verifyLinkOwnership(req.params.linkId, req.user.userId);
     if (!link) return res.status(404).json({ error: "Link not found" });
 
@@ -239,6 +269,10 @@ async function getTimeline(req, res, next) {
 
 async function getDevices(req, res, next) {
   try {
+    if (!isValidUUID(req.params.linkId)) {
+      return res.status(400).json({ error: 'Invalid link ID format' });
+    }
+
     const link = await verifyLinkOwnership(req.params.linkId, req.user.userId);
     if (!link) return res.status(404).json({ error: "Link not found" });
 
@@ -252,6 +286,10 @@ async function getDevices(req, res, next) {
 
 async function getBrowsers(req, res, next) {
   try {
+    if (!isValidUUID(req.params.linkId)) {
+      return res.status(400).json({ error: 'Invalid link ID format' });
+    }
+
     const link = await verifyLinkOwnership(req.params.linkId, req.user.userId);
     if (!link) return res.status(404).json({ error: "Link not found" });
 
@@ -265,6 +303,10 @@ async function getBrowsers(req, res, next) {
 
 async function getOS(req, res, next) {
   try {
+    if (!isValidUUID(req.params.linkId)) {
+      return res.status(400).json({ error: 'Invalid link ID format' });
+    }
+
     const link = await verifyLinkOwnership(req.params.linkId, req.user.userId);
     if (!link) return res.status(404).json({ error: "Link not found" });
 
@@ -278,6 +320,10 @@ async function getOS(req, res, next) {
 
 async function getReferrers(req, res, next) {
   try {
+    if (!isValidUUID(req.params.linkId)) {
+      return res.status(400).json({ error: 'Invalid link ID format' });
+    }
+
     const link = await verifyLinkOwnership(req.params.linkId, req.user.userId);
     if (!link) return res.status(404).json({ error: "Link not found" });
 

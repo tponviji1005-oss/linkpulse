@@ -41,7 +41,7 @@ Rate limit responses include `RateLimit-*` standard headers and return:
 
 Create a new user account.
 
-**Rate limit:** 10 requests/minute
+**Rate limit:** shared API-wide limiter (100 requests/minute per IP)
 
 **Request body:**
 ```json
@@ -80,7 +80,7 @@ Create a new user account.
 
 Authenticate an existing user.
 
-**Rate limit:** 10 requests/minute
+**Rate limit:** shared API-wide limiter (100 requests/minute per IP)
 
 **Request body:**
 ```json

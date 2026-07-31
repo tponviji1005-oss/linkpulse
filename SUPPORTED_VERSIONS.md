@@ -42,7 +42,7 @@ A version reaches end of life when it has been superseded by a newer minor or ma
 | 18.x            | Yes       |
 | 16.x and below  | No        |
 
-LinkPulse is tested against Node.js 18.x and 20.x in CI. Use the latest LTS release within a supported major version for best results.
+LinkPulse targets Node.js 18.x and 20.x. Automated CI verification of these versions is planned for Phase 6. Use the latest LTS release within a supported major version for best results.
 
 ### Browsers
 

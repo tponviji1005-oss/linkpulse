@@ -16,6 +16,8 @@ function EditLinkModal({ link, onClose, onSaved }) {
   const [isActive, setIsActive] = useState(link.isActive);
   const [expiresAt, setExpiresAt] = useState(formatDatetimeLocal(link.expiresAt));
   const [hasExpiry, setHasExpiry] = useState(!!link.expiresAt);
+  const [maxClicks, setMaxClicks] = useState(link.maxClicks ?? '');
+  const [hasMaxClicks, setHasMaxClicks] = useState(link.maxClicks != null);
   const [password, setPassword] = useState('');
   const [removePassword, setRemovePassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -43,6 +45,7 @@ function EditLinkModal({ link, onClose, onSaved }) {
         title: title || undefined,
         isActive,
         expiresAt: hasExpiry && expiresAt ? expiresAt : null,
+        maxClicks: hasMaxClicks && maxClicks ? Number(maxClicks) : null,
       };
 
       if (removePassword) {
@@ -106,6 +109,27 @@ function EditLinkModal({ link, onClose, onSaved }) {
                 className="input"
                 value={expiresAt}
                 onChange={(e) => setExpiresAt(e.target.value)}
+              />
+            )}
+          </div>
+          <div className="modal-label">
+            <div className="modal-checkbox-row">
+              <input
+                type="checkbox"
+                id="edit-has-max-clicks"
+                checked={hasMaxClicks}
+                onChange={(e) => setHasMaxClicks(e.target.checked)}
+              />
+              <label htmlFor="edit-has-max-clicks">Set click limit</label>
+            </div>
+            {hasMaxClicks && (
+              <input
+                type="number"
+                min="1"
+                className="input"
+                placeholder="Unlimited"
+                value={maxClicks}
+                onChange={(e) => setMaxClicks(e.target.value)}
               />
             )}
           </div>

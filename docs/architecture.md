@@ -233,15 +233,14 @@ On graceful shutdown (`SIGTERM`/`SIGINT`), the Redis connection is closed with `
 
 ### Rate Limiting
 
-Three separate rate limiters protect different endpoint groups:
+Two rate limiters protect different endpoint groups:
 
 | Limiter | Scope | Limit | Window |
 |---|---|---|---|
-| `authLimiter` | `/api/auth/*` | 10 requests | 1 minute |
-| `apiLimiter` | All `/api/*` routes | 120 requests | 1 minute |
+| `apiLimiter` | All `/api/*` routes | 100 requests | 1 minute |
 | `redirectLimiter` | `GET /:shortCode` | 30 requests | 1 minute |
 
-All limiters use `standardHeaders: true` (returns rate limit info in `RateLimit-*` headers) and `legacyHeaders: false`.
+The API limiter is a custom Redis-backed fixed-window limiter (`middleware/rateLimiter.js`); the redirect limiter uses `express-rate-limit`. Both return rate limit info in `RateLimit-*` headers. There is no dedicated auth limiter.
 
 ### HTTP Security Headers
 

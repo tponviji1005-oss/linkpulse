@@ -36,6 +36,10 @@ app.use(express.json({ limit: '1mb' }));
 
 app.use('/api', apiRateLimiter, routes);
 
+app.use('/api', (req, res) => {
+  res.status(404).json({ error: 'Not Found' });
+});
+
 app.get('/health', (req, res) => {
   const redisStatus = redis ? redis.status : 'not configured';
   res.json({ status: 'ok', uptime: process.uptime(), redis: redisStatus });

@@ -4,28 +4,40 @@ import { createLink } from '../api/links.js';
 
 function CreateLinkForm({ onCreated }) {
   const [originalUrl, setOriginalUrl] = useState('');
+  const [customAlias, setCustomAlias] = useState('');
+  const [aliasError, setAliasError] = useState('');
   const [password, setPassword] = useState('');
   const [expiresAt, setExpiresAt] = useState('');
+  const [maxClicks, setMaxClicks] = useState('');
   const [loading, setLoading] = useState(false);
   const [showOptions, setShowOptions] = useState(false);
 
   async function handleSubmit(e) {
     e.preventDefault();
     setLoading(true);
+    setAliasError('');
 
     try {
       await createLink(originalUrl, {
+        customAlias: customAlias.trim() || undefined,
         password: password || undefined,
         expiresAt: expiresAt || undefined,
+        maxClicks: maxClicks ? Number(maxClicks) : undefined,
       });
       setOriginalUrl('');
+      setCustomAlias('');
       setPassword('');
       setExpiresAt('');
+      setMaxClicks('');
       setShowOptions(false);
       toast.success('Link created');
       onCreated();
     } catch (err) {
-      toast.error(err.message);
+      if (err.status === 409 || /alias/i.test(err.message)) {
+        setAliasError(err.message);
+      } else {
+        toast.error(err.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -57,11 +69,39 @@ function CreateLinkForm({ onCreated }) {
       {showOptions && (
         <div className="form-options">
           <label className="form-option-label">
+            Custom alias (optional)
+            <input
+              type="text"
+              placeholder="e.g. my-summer-sale"
+              value={customAlias}
+              onChange={(e) => {
+                setCustomAlias(e.target.value);
+                setAliasError('');
+              }}
+              className="input"
+            />
+            {aliasError && <span className="form-field-error">{aliasError}</span>}
+            <span className="form-field-hint">
+              3-20 characters, letters, numbers, hyphens, underscores only
+            </span>
+          </label>
+          <label className="form-option-label">
             Expiration
             <input
               type="datetime-local"
               value={expiresAt}
               onChange={(e) => setExpiresAt(e.target.value)}
+              className="input"
+            />
+          </label>
+          <label className="form-option-label">
+            Maximum Clicks (optional)
+            <input
+              type="number"
+              min="1"
+              placeholder="Unlimited"
+              value={maxClicks}
+              onChange={(e) => setMaxClicks(e.target.value)}
               className="input"
             />
           </label>

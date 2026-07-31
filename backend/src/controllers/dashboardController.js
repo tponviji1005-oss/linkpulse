@@ -14,7 +14,7 @@ const getDashboardSummary = async (req, res, next) => {
 
     const userId = req.user.userId;
 
-    const [totalLinks, activeLinks, totalClicks, recentLinks] = await Promise.all([
+    const [totalLinks, activeLinks, totalClicks, realClicks, botClicks, flaggedLinks, recentLinks] = await Promise.all([
       prisma.link.count({ where: { userId } }),
       prisma.link.count({ where: { userId, isActive: true } }),
       prisma.click.count({
@@ -22,6 +22,19 @@ const getDashboardSummary = async (req, res, next) => {
           link: { userId },
         },
       }),
+      prisma.click.count({
+        where: {
+          link: { userId },
+          isBot: false,
+        },
+      }),
+      prisma.click.count({
+        where: {
+          link: { userId },
+          isBot: true,
+        },
+      }),
+      prisma.link.count({ where: { userId, isFlagged: true } }),
       prisma.link.findMany({
         where: { userId },
         orderBy: { createdAt: 'desc' },
@@ -47,6 +60,9 @@ const getDashboardSummary = async (req, res, next) => {
       activeLinks,
       inactiveLinks,
       totalClicks,
+      realClicks,
+      botClicks,
+      flaggedLinks,
       recentLinks: recentLinks.map((l) => ({
         id: l.id,
         shortCode: l.shortCode,

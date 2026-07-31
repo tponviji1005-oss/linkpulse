@@ -21,8 +21,10 @@ export async function getLinks(params = {}) {
 
 export async function createLink(originalUrl, options = {}) {
   const body = { originalUrl };
+  if (options.customAlias) body.customAlias = options.customAlias;
   if (options.expiresAt) body.expiresAt = options.expiresAt;
   if (options.password) body.password = options.password;
+  if (options.maxClicks != null) body.maxClicks = options.maxClicks;
 
   return request('/api/links', {
     method: 'POST',

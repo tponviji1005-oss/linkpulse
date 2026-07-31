@@ -16,7 +16,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - CSV import and export for bulk link operations
 - Bulk create, delete, activate, and deactivate operations
 - Docker support with multi-stage builds
-- CI/CD pipeline configuration
+- CI/CD pipeline configuration (GitHub Actions — planned for Phase 6)
 - CONTRIBUTING.md guide
 - SECURITY.md policy
 - CODE_OF_CONDUCT.md

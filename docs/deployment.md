@@ -190,8 +190,7 @@ Rate limits are applied per IP address:
 
 | Endpoint Group | Limit | Window |
 |---|---|---|
-| `/api/auth/*` | 10 requests | 1 minute |
-| `/api/*` (all API routes) | 120 requests | 1 minute |
+| `/api/*` (all API routes) | 100 requests | 1 minute |
 | `GET /:shortCode` (redirects) | 30 requests | 1 minute |
 
 If you deploy behind a reverse proxy (Nginx, Cloudflare, ALB), configure it to forward the real client IP via `X-Forwarded-For` or `X-Real-IP` headers, and trust those headers in Express:

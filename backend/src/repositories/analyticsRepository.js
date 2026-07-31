@@ -42,21 +42,40 @@ async function findClicksByPeriod(linkId, start, end) {
   });
 }
 
-async function countClicksByRange(linkId, start, end) {
+async function countClicksByRange(linkId, start, end, isBot) {
   return prisma.click.count({
     where: {
       linkId,
       createdAt: { gte: start, lte: end },
+      ...(isBot === undefined ? {} : { isBot }),
     },
   });
 }
 
-async function getUniqueVisitors(linkId, start, end) {
+async function countClicksSince(linkId, ipAddress, since) {
+  return prisma.click.count({
+    where: {
+      linkId,
+      ipAddress,
+      createdAt: { gte: since },
+    },
+  });
+}
+
+async function flagLink(linkId) {
+  return prisma.link.updateMany({
+    where: { id: linkId, isFlagged: false },
+    data: { isFlagged: true },
+  });
+}
+
+async function getUniqueVisitors(linkId, start, end, isBot) {
   const result = await prisma.click.findMany({
     where: {
       linkId,
       createdAt: { gte: start, lte: end },
       ipAddress: { not: null },
+      ...(isBot === undefined ? {} : { isBot }),
     },
     select: { ipAddress: true },
     distinct: ["ipAddress"],
@@ -64,11 +83,12 @@ async function getUniqueVisitors(linkId, start, end) {
   return result.length;
 }
 
-async function getFieldBreakdown(linkId, field, start, end) {
+async function getFieldBreakdown(linkId, field, start, end, isBot) {
   const rows = await prisma.click.findMany({
     where: {
       linkId,
       createdAt: { gte: start, lte: end },
+      ...(isBot === undefined ? {} : { isBot }),
     },
     select: { [field]: true },
   });
@@ -84,11 +104,12 @@ async function getFieldBreakdown(linkId, field, start, end) {
     .sort((a, b) => b.count - a.count);
 }
 
-async function getDailyTimeline(linkId, start, end) {
+async function getDailyTimeline(linkId, start, end, isBot) {
   const clicks = await prisma.click.findMany({
     where: {
       linkId,
       createdAt: { gte: start, lte: end },
+      ...(isBot === undefined ? {} : { isBot }),
     },
     select: { createdAt: true },
     orderBy: { createdAt: "asc" },
@@ -105,11 +126,12 @@ async function getDailyTimeline(linkId, start, end) {
     .sort((a, b) => a.date.localeCompare(b.date));
 }
 
-async function getClickFields(linkId, fields, start, end) {
+async function getClickFields(linkId, fields, start, end, isBot) {
   return prisma.click.findMany({
     where: {
       linkId,
       createdAt: { gte: start, lte: end },
+      ...(isBot === undefined ? {} : { isBot }),
     },
     select: fields.reduce((acc, f) => ({ ...acc, [f]: true }), {}),
   });
@@ -121,6 +143,8 @@ module.exports = {
   countClicks,
   findClicksByPeriod,
   countClicksByRange,
+  countClicksSince,
+  flagLink,
   getUniqueVisitors,
   getFieldBreakdown,
   getDailyTimeline,

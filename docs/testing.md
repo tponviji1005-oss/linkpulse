@@ -44,7 +44,7 @@ npm ci
 npm run dev
 ```
 
-The frontend starts on `http://localhost:5173` and proxies API calls to `http://localhost:5000`.
+The frontend starts on `http://localhost:5173` and calls the backend directly at `http://localhost:5000` (configured via `VITE_API_URL` in `frontend/.env` and `frontend/src/api/client.js`). There is no Vite dev proxy.
 
 ### Verify Everything Works
 
@@ -218,8 +218,8 @@ Walk through each of these flows to verify the system works end-to-end.
 
 ### 18. Rate Limiting
 
-1. Send 11 rapid requests to `/api/auth/login`
-2. Verify: the 11th request returns `"Too many requests, please try again later"` with 429 status
+1. Send 101 rapid requests to an API endpoint (e.g. `/api/auth/login`)
+2. Verify: the 101st request returns `"Too many requests, please try again later"` with 429 status (API-wide limit is 100 requests/minute per IP)
 
 ---
 

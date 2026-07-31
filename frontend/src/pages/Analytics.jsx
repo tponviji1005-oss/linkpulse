@@ -203,10 +203,17 @@ function Analytics() {
 
       {loading && <div className="loading-overlay"><span className="spinner" /></div>}
 
+      {data.link?.isFlagged && (
+        <div className="analytics-warning" role="alert">
+          <span className="analytics-warning-icon">&#9888;</span>
+          Suspicious traffic detected
+        </div>
+      )}
+
       <div className="analytics-kpi-grid">
         <KPICard label="Total Clicks" value={data.totalClicks} />
         <KPICard label="Unique Visitors" value={data.uniqueClicks} />
-        <KPICard label="Human Clicks" value={data.humanClicks} />
+        <KPICard label="Real Clicks" value={data.realClicks} />
         <KPICard label="Bot Clicks" value={data.botClicks} />
       </div>
 
@@ -288,10 +295,10 @@ function Analytics() {
           </div>
 
           <div className="analytics-comparison-grid">
-            <ChartCard title="Bot vs Human">
+            <ChartCard title="Bot vs Real">
               <div className="comparison-bars">
                 <div className="comparison-row">
-                  <span className="comparison-label">Human</span>
+                  <span className="comparison-label">Real</span>
                   <div className="comparison-track">
                     <div
                       className="comparison-fill comparison-fill-human"

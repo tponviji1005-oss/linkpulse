@@ -31,6 +31,10 @@ const bulkCreateLinks = async (req, res, next) => {
 
     for (let i = 0; i < links.length; i++) {
       const item = links[i];
+      if (typeof item !== 'object' || item === null) {
+        errors.push({ row: i + 1, error: 'Invalid link entry' });
+        continue;
+      }
       const { originalUrl, title, password, expiresAt } = item;
 
       if (!originalUrl || !validator.isURL(originalUrl)) {
@@ -43,8 +47,17 @@ const bulkCreateLinks = async (req, res, next) => {
         continue;
       }
 
+      if (title !== undefined && title !== null && (typeof title !== 'string' || title.length > 255)) {
+        errors.push({ row: i + 1, originalUrl, error: 'title must be a string with at most 255 characters' });
+        continue;
+      }
+
       let passwordHash = null;
       if (password) {
+        if (typeof password !== 'string') {
+          errors.push({ row: i + 1, originalUrl, error: 'password must be a string' });
+          continue;
+        }
         passwordHash = await bcrypt.hash(password, 10);
       }
 
@@ -107,7 +120,12 @@ const csvUpload = async (req, res, next) => {
       return res.status(400).json({ error: 'CSV file is required' });
     }
 
-    const records = parseCSV(req.file.buffer);
+    let records;
+    try {
+      records = parseCSV(req.file.buffer);
+    } catch {
+      return res.status(400).json({ error: 'Invalid CSV format' });
+    }
 
     if (records.length === 0) {
       return res.status(400).json({ error: 'CSV file is empty or has no valid rows' });
@@ -140,6 +158,11 @@ const csvUpload = async (req, res, next) => {
 
       if (existingUrls.has(originalUrl)) {
         errors.push({ row: i + 1, originalUrl, error: 'Duplicate URL' });
+        continue;
+      }
+
+      if (title && title.length > 255) {
+        errors.push({ row: i + 1, originalUrl, error: 'title must be at most 255 characters' });
         continue;
       }
 

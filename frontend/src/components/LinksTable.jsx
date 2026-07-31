@@ -9,6 +9,9 @@ function StatusBadges({ link }) {
   const isExpired = link.expiresAt && new Date(link.expiresAt) < new Date();
   const badges = [];
 
+  if (link.isFlagged) {
+    badges.push(<span key="flag" className="badge badge-flagged">&#9888; Flagged</span>);
+  }
   if (link.hasPassword) {
     badges.push(<span key="pw" className="badge badge-protected">&#128274; Protected</span>);
   }

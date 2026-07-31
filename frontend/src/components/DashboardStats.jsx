@@ -41,6 +41,8 @@ function DashboardStats() {
   const cards = [
     { label: 'Total Links', value: stats.totalLinks },
     { label: 'Total Clicks', value: stats.totalClicks },
+    { label: 'Real Clicks', value: stats.realClicks },
+    { label: 'Bot Clicks', value: stats.botClicks },
     { label: 'Active Links', value: stats.activeLinks },
     { label: 'Inactive Links', value: stats.inactiveLinks },
   ];

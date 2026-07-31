@@ -7,10 +7,52 @@ const { invalidateCache } = require('../utils/cache');
 const { dashboardSummaryKey, topLinksKey } = require('../utils/cacheKeys');
 const { getCachedLink, setCachedLink, deleteCachedLink } = require('../lib/redirectCache');
 const { parsePagination, paginateResponse } = require('../utils/pagination');
+const { isValidUUID } = require('../utils/uuid');
 const { invalidateLinkAnalytics } = require('./analyticsController');
 const analyticsService = require('../services/analyticsService');
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+
+const RESERVED_SHORT_CODES = [
+  'api',
+  'health',
+  'login',
+  'register',
+  'dashboard',
+  'auth',
+  'links',
+  'analytics',
+  'bulk',
+  'profile',
+  'password-gate',
+];
+
+const CUSTOM_ALIAS_REGEX = /^[a-zA-Z0-9_-]+$/;
+
+const parseMaxClicks = (value) => {
+  if (value === undefined) return { valid: true, value: null };
+  if (value === null || value === '') return { valid: true, value: null };
+  const num = Number(value);
+  if (!Number.isInteger(num) || num <= 0) {
+    return { valid: false, error: 'maxClicks must be a positive integer' };
+  }
+  return { valid: true, value: num };
+};
+
+const parseTitle = (value) => {
+  if (value === undefined || value === null || value === '') {
+    return { valid: true, value: value || null };
+  }
+  if (typeof value !== 'string') {
+    return { valid: false, error: 'title must be a string' };
+  }
+  if (value.length > 255) {
+    return { valid: false, error: 'title must be at most 255 characters' };
+  }
+  return { valid: true, value };
+};
+
+const MAX_SHORT_CODE_RETRIES = 5;
 
 const SELECT_LINK_FIELDS = {
   id: true,
@@ -19,6 +61,8 @@ const SELECT_LINK_FIELDS = {
   title: true,
   isActive: true,
   expiresAt: true,
+  maxClicks: true,
+  isFlagged: true,
   createdAt: true,
 };
 
@@ -30,10 +74,20 @@ function stripPasswordHash(link) {
 
 const createLink = async (req, res, next) => {
   try {
-    const { originalUrl, title, expiresAt, password } = req.body;
+    const { originalUrl, title, expiresAt, password, customAlias, maxClicks } = req.body;
 
     if (!originalUrl) {
       return res.status(400).json({ error: 'originalUrl is required' });
+    }
+
+    const maxClicksResult = parseMaxClicks(maxClicks);
+    if (!maxClicksResult.valid) {
+      return res.status(400).json({ error: maxClicksResult.error });
+    }
+
+    const titleResult = parseTitle(title);
+    if (!titleResult.valid) {
+      return res.status(400).json({ error: titleResult.error });
     }
 
     if (!validator.isURL(originalUrl)) {
@@ -58,19 +112,75 @@ const createLink = async (req, res, next) => {
       passwordHash = await bcrypt.hash(password, 10);
     }
 
-    const shortCode = nanoid(8);
+    let shortCode = null;
 
-    const link = await prisma.link.create({
-      data: {
-        originalUrl,
-        shortCode,
-        title: title || null,
-        userId: req.user.userId,
-        expiresAt: expiresAt ? new Date(expiresAt) : null,
-        passwordHash,
-      },
-      select: SELECT_LINK_FIELDS,
-    });
+    const alias = customAlias ? String(customAlias).trim() : '';
+    if (alias) {
+      if (alias.length < 3 || alias.length > 20) {
+        return res.status(400).json({ error: 'Custom alias must be between 3 and 20 characters' });
+      }
+
+      if (!CUSTOM_ALIAS_REGEX.test(alias)) {
+        return res.status(400).json({ error: 'Custom alias can only contain letters, numbers, hyphens, and underscores' });
+      }
+
+      if (RESERVED_SHORT_CODES.includes(alias.toLowerCase())) {
+        return res.status(400).json({ error: 'This alias is reserved and cannot be used' });
+      }
+
+      const existing = await prisma.link.findFirst({
+        where: { shortCode: { equals: alias, mode: 'insensitive' } },
+        select: { id: true },
+      });
+
+      if (existing) {
+        return res.status(409).json({ error: 'This alias is already taken' });
+      }
+
+      shortCode = alias;
+    }
+
+    const linkData = {
+      originalUrl,
+      shortCode: null,
+      title: titleResult.value,
+      userId: req.user.userId,
+      expiresAt: expiresAt ? new Date(expiresAt) : null,
+      maxClicks: maxClicksResult.value,
+      passwordHash,
+    };
+
+    let link;
+    if (shortCode) {
+      try {
+        link = await prisma.link.create({
+          data: { ...linkData, shortCode },
+          select: SELECT_LINK_FIELDS,
+        });
+      } catch (error) {
+        if (error.code === 'P2002') {
+          return res.status(409).json({ error: 'This alias is already taken' });
+        }
+        throw error;
+      }
+    } else {
+      for (let attempt = 0; attempt < MAX_SHORT_CODE_RETRIES; attempt++) {
+        try {
+          link = await prisma.link.create({
+            data: { ...linkData, shortCode: nanoid(8) },
+            select: SELECT_LINK_FIELDS,
+          });
+          break;
+        } catch (error) {
+          if (error.code !== 'P2002') {
+            throw error;
+          }
+        }
+      }
+      if (!link) {
+        return res.status(409).json({ error: 'Failed to generate a unique short code. Please try again.' });
+      }
+    }
 
     res.status(201).json({
       message: 'Short link created successfully',
@@ -145,6 +255,10 @@ const getMyLinks = async (req, res, next) => {
 
 const getLink = async (req, res, next) => {
   try {
+    if (!isValidUUID(req.params.id)) {
+      return res.status(400).json({ error: 'Invalid link ID format' });
+    }
+
     const link = await prisma.link.findFirst({
       where: {
         id: req.params.id,
@@ -169,7 +283,11 @@ const getLink = async (req, res, next) => {
 
 const updateLink = async (req, res, next) => {
   try {
-    const { originalUrl, title, isActive, expiresAt, password } = req.body;
+    if (!isValidUUID(req.params.id)) {
+      return res.status(400).json({ error: 'Invalid link ID format' });
+    }
+
+    const { originalUrl, title, isActive, expiresAt, password, maxClicks } = req.body;
 
     const existing = await prisma.link.findFirst({
       where: {
@@ -194,6 +312,9 @@ const updateLink = async (req, res, next) => {
     if (title !== undefined) {
       if (typeof title !== 'string') {
         return res.status(400).json({ error: 'title must be a string' });
+      }
+      if (title.length > 255) {
+        return res.status(400).json({ error: 'title must be at most 255 characters' });
       }
       data.title = title;
     }
@@ -231,6 +352,14 @@ const updateLink = async (req, res, next) => {
       }
     }
 
+    if (maxClicks !== undefined) {
+      const maxClicksResult = parseMaxClicks(maxClicks);
+      if (!maxClicksResult.valid) {
+        return res.status(400).json({ error: maxClicksResult.error });
+      }
+      data.maxClicks = maxClicksResult.value;
+    }
+
     const link = await prisma.link.update({
       where: { id: existing.id },
       data,
@@ -253,6 +382,10 @@ const updateLink = async (req, res, next) => {
 
 const deleteLink = async (req, res, next) => {
   try {
+    if (!isValidUUID(req.params.id)) {
+      return res.status(400).json({ error: 'Invalid link ID format' });
+    }
+
     const existing = await prisma.link.findFirst({
       where: {
         id: req.params.id,
@@ -295,6 +428,7 @@ const redirectLink = async (req, res, next) => {
           shortCode: true,
           originalUrl: true,
           expiresAt: true,
+          maxClicks: true,
           passwordHash: true,
         },
       });
@@ -310,6 +444,18 @@ const redirectLink = async (req, res, next) => {
 
     if (link.expiresAt && new Date(link.expiresAt) < new Date()) {
       return res.status(410).json({ error: 'This link has expired.' });
+    }
+
+    if (link.maxClicks != null) {
+      const clickCount = await prisma.click.count({ where: { linkId: link.id } });
+      if (clickCount >= link.maxClicks) {
+        await prisma.link.update({
+          where: { id: link.id },
+          data: { isActive: false },
+        });
+        await deleteCachedLink(link.shortCode);
+        return res.status(410).json({ error: 'Link click limit reached' });
+      }
     }
 
     if (link.passwordHash) {
@@ -331,6 +477,10 @@ const redirectLink = async (req, res, next) => {
 
 const verifyPassword = async (req, res, next) => {
   try {
+    if (!isValidUUID(req.params.id)) {
+      return res.status(400).json({ error: 'Invalid link ID format' });
+    }
+
     const { password } = req.body;
 
     if (!password) {
@@ -383,6 +533,10 @@ const verifyPassword = async (req, res, next) => {
 
 const getLinkAnalytics = async (req, res, next) => {
   try {
+    if (!isValidUUID(req.params.id)) {
+      return res.status(400).json({ error: 'Invalid link ID format' });
+    }
+
     const existing = await prisma.link.findFirst({
       where: {
         id: req.params.id,
@@ -432,6 +586,10 @@ const getLinkAnalytics = async (req, res, next) => {
 
 const generateQRCode = async (req, res, next) => {
   try {
+    if (!isValidUUID(req.params.id)) {
+      return res.status(400).json({ error: 'Invalid link ID format' });
+    }
+
     const link = await prisma.link.findFirst({
       where: {
         id: req.params.id,

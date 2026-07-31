@@ -51,7 +51,7 @@ function buildClickData({ linkId, req }) {
     referer: extractReferer(req),
     ipAddress,
     language: extractLanguage(req),
-    isBot: isBot(userAgent),
+    isBot: isBot(userAgent, req.headers),
     country: getCountry(ipAddress),
   };
 }

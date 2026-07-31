@@ -2,7 +2,6 @@
 
 A modern, full-stack URL shortener with real-time analytics, bulk management, and advanced link features.
 
-[![CI](https://github.com/your-username/linkpulse/actions/workflows/ci.yml/badge.svg)](https://github.com/your-username/linkpulse/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/Node.js-18%2B-green.svg)](https://nodejs.org)
 [![React](https://img.shields.io/badge/React-19-61DAFB.svg)](https://react.dev)
@@ -37,7 +36,7 @@ A modern, full-stack URL shortener with real-time analytics, bulk management, an
 ### Security
 - **JWT Authentication** - Secure login with 7-day token expiry
 - **bcrypt Password Hashing** - Cost factor of 10
-- **Rate Limiting** - Auth: 10/min, API: 120/min, Redirects: 30/min
+- **Rate Limiting** - API-wide limiter: 100/min, Redirects: 30/min
 - **Helmet Headers** - HTTP security headers enabled
 - **Input Validation** - All inputs validated with validator.js
 - **SQL Injection Prevention** - Prisma ORM parameterized queries
@@ -52,11 +51,7 @@ A modern, full-stack URL shortener with real-time analytics, bulk management, an
 
 ## Screenshots
 
-> Add screenshots of the dashboard, analytics, and bulk management pages here.
-
-| Dashboard | Analytics | Bulk Management |
-|-----------|-----------|-----------------|
-| ![Dashboard](docs/screenshots/dashboard.png) | ![Analytics](docs/screenshots/analytics.png) | ![Bulk](docs/screenshots/bulk.png) |
+> Screenshots of the dashboard, analytics, and bulk management pages are coming soon.
 
 ---
 
@@ -69,7 +64,7 @@ A modern, full-stack URL shortener with real-time analytics, bulk management, an
 | **Database** | PostgreSQL (via Prisma + PrismaPg adapter) |
 | **Cache** | Redis (ioredis, optional — gracefully degrades, managed via `lib/redis.js`) |
 | **Security** | Helmet, CORS, bcrypt, JWT, express-rate-limit |
-| **DevOps** | Docker, Docker Compose, GitHub Actions CI |
+| **DevOps** | Docker, Docker Compose |
 
 ---
 
@@ -227,7 +222,6 @@ linkpulse/
 │   ├── Dockerfile
 │   └── package.json
 ├── docs/                    # Documentation
-├── .github/                 # CI, issue/PR templates
 ├── docker-compose.yml
 ├── CONTRIBUTING.md
 ├── CHANGELOG.md
@@ -255,10 +249,10 @@ linkpulse/
 - [x] Responsive UI with loading states
 - [x] Redis caching with graceful degradation
 - [x] Docker & Docker Compose support
-- [x] GitHub Actions CI pipeline
 - [x] Full project documentation
 
 ### Planned
+- [ ] GitHub Actions CI pipeline (Phase 6)
 - [ ] Geographic analytics with GeoIP
 - [ ] Custom short codes (user-defined aliases)
 - [ ] Link tags and collections

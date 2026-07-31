@@ -11,8 +11,16 @@ const register = async (req, res, next) => {
       return res.status(400).json({ error: "Name is required" });
     }
 
+    if (name.trim().length > 100) {
+      return res.status(400).json({ error: "Name must be at most 100 characters" });
+    }
+
     if (!email || !email.trim()) {
       return res.status(400).json({ error: "Email is required" });
+    }
+
+    if (email.trim().length > 255) {
+      return res.status(400).json({ error: "Email must be at most 255 characters" });
     }
 
     if (!validator.isEmail(email)) {

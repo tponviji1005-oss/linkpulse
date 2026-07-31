@@ -20,7 +20,9 @@ async function request(path, options = {}) {
   const data = await res.json();
 
   if (!res.ok) {
-    throw new Error(data.error || data.message || 'Request failed');
+    const error = new Error(data.error || data.message || 'Request failed');
+    error.status = res.status;
+    throw error;
   }
 
   return data;
@@ -38,7 +40,9 @@ async function requestBlob(path) {
 
   if (!res.ok) {
     const data = await res.json();
-    throw new Error(data.error || data.message || 'Request failed');
+    const error = new Error(data.error || data.message || 'Request failed');
+    error.status = res.status;
+    throw error;
   }
 
   return res.blob();
