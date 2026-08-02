@@ -39,14 +39,31 @@ export async function updateLink(id, data) {
   });
 }
 
+export async function updateGeoRules(id, rules) {
+  return request(`/api/links/${id}/geo-rules`, {
+    method: 'PUT',
+    body: JSON.stringify({ rules }),
+  });
+}
+
+export async function updateDeviceRules(id, rules) {
+  return request(`/api/links/${id}/device-rules`, {
+    method: 'PUT',
+    body: JSON.stringify({ rules }),
+  });
+}
+
+export async function updateABVariants(id, variants) {
+  return request(`/api/links/${id}/ab-variants`, {
+    method: 'PUT',
+    body: JSON.stringify({ variants }),
+  });
+}
+
 export async function deleteLink(id) {
   return request(`/api/links/${id}`, {
     method: 'DELETE',
   });
-}
-
-export async function getLinkAnalytics(id) {
-  return request(`/api/links/${id}/analytics`);
 }
 
 export async function getAdvancedAnalytics(id, period = 'all') {
@@ -71,42 +88,17 @@ export async function bulkCreateLinks(links) {
   });
 }
 
-import { BASE_URL } from './client.js';
-
 export async function csvUpload(file) {
   const formData = new FormData();
   formData.append('file', file);
-
-  const token = localStorage.getItem('token');
-  const headers = {};
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-
-  const res = await fetch(`${BASE_URL}/api/bulk/csv`, {
+  return request('/api/bulk/csv', {
     method: 'POST',
-    headers,
     body: formData,
   });
-
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data.error || data.message || 'Upload failed');
-  }
-  return data;
 }
 
 export async function exportCSV() {
-  const token = localStorage.getItem('token');
-  const headers = {};
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-
-  const res = await fetch(`${BASE_URL}/api/bulk/export`, { headers });
-
-  if (!res.ok) {
-    const data = await res.json();
-    throw new Error(data.error || data.message || 'Export failed');
-  }
-
-  return res.blob();
+  return requestBlob('/api/bulk/export');
 }
 
 export async function bulkDelete(ids) {

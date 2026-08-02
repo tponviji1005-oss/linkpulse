@@ -22,7 +22,13 @@ function ConfirmDialog({ open, title, message, confirmLabel, cancelLabel, onConf
 
   return (
     <div className="modal-overlay" onClick={onCancel}>
-      <div className="modal-content confirm-dialog" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="modal-content confirm-dialog"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+      >
         <div className="confirm-dialog-body">
           <h3 className="confirm-dialog-title">{title}</h3>
           <p className="confirm-dialog-message">{message}</p>

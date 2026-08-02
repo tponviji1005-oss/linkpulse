@@ -1,9 +1,8 @@
 const { getCache, setCache, invalidateCache } = require('../utils/cache');
 const { redirectCacheKey } = require('../utils/cacheKeys');
+const { isDev } = require('../helpers/analyticsHelper');
 
 const REDIRECT_CACHE_TTL = 3600;
-
-const isDev = () => process.env.NODE_ENV === 'development';
 
 async function getCachedLink(shortCode) {
   const key = redirectCacheKey(shortCode);
@@ -32,5 +31,4 @@ module.exports = {
   getCachedLink,
   setCachedLink,
   deleteCachedLink,
-  REDIRECT_CACHE_TTL,
 };

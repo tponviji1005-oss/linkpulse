@@ -53,19 +53,4 @@ app.get('/:shortCode', redirectLimiter, redirectLink);
 
 app.use(errorHandler);
 
-if (redis) {
-  const shutdown = async (signal) => {
-    console.log(`${signal} received - closing Redis connection`);
-    try {
-      await redis.quit();
-    } catch {
-      redis.disconnect();
-    }
-    process.exit(0);
-  };
-
-  process.on('SIGTERM', () => shutdown('SIGTERM'));
-  process.on('SIGINT', () => shutdown('SIGINT'));
-}
-
 module.exports = app;

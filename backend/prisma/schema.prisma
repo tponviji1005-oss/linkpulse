@@ -35,10 +35,58 @@ model Link {
 
   user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   clicks Click[]
+  geoRules GeoRule[]
+  deviceRules DeviceRule[]
+  abVariants ABVariant[]
 
   @@index([userId])
   @@index([createdAt])
   @@map("links")
+}
+
+model GeoRule {
+  id             String   @id @default(uuid()) @db.Uuid
+  linkId         String   @map("link_id") @db.Uuid
+  countryCode    String   @map("country_code") @db.VarChar(2)
+  destinationUrl String   @map("destination_url") @db.Text
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  link Link @relation(fields: [linkId], references: [id], onDelete: Cascade)
+
+  @@unique([linkId, countryCode])
+  @@index([linkId])
+  @@map("geo_rules")
+}
+
+model DeviceRule {
+  id             String   @id @default(uuid()) @db.Uuid
+  linkId         String   @map("link_id") @db.Uuid
+  deviceType     String   @map("device_type") @db.VarChar(20)
+  destinationUrl String   @map("destination_url") @db.Text
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  link Link @relation(fields: [linkId], references: [id], onDelete: Cascade)
+
+  @@unique([linkId, deviceType])
+  @@index([linkId])
+  @@map("device_rules")
+}
+
+model ABVariant {
+  id             String   @id @default(uuid()) @db.Uuid
+  linkId         String   @map("link_id") @db.Uuid
+  destinationUrl String   @map("destination_url") @db.Text
+  weight         Int      @db.SmallInt
+  label          String?  @db.VarChar(100)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  link Link @relation(fields: [linkId], references: [id], onDelete: Cascade)
+
+  @@index([linkId])
+  @@map("ab_variants")
 }
 
 model Click {
@@ -61,6 +109,8 @@ model Click {
   state           String?  @db.VarChar(100)
   timezone        String?  @db.VarChar(50)
   isBot           Boolean  @default(false) @map("is_bot")
+  redirectType    String?  @map("redirect_type") @db.VarChar(20)
+  abVariantLabel  String?  @map("ab_variant_label") @db.VarChar(100)
   createdAt       DateTime @default(now()) @map("created_at")
 
   link Link @relation(fields: [linkId], references: [id], onDelete: Cascade)

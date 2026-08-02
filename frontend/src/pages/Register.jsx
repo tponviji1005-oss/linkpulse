@@ -37,6 +37,7 @@ function Register() {
           onChange={(e) => setName(e.target.value)}
           required
           className="input"
+          aria-label="Name"
         />
         <input
           type="email"
@@ -45,6 +46,7 @@ function Register() {
           onChange={(e) => setEmail(e.target.value)}
           required
           className="input"
+          aria-label="Email"
         />
         <input
           type="password"
@@ -54,6 +56,7 @@ function Register() {
           required
           minLength={8}
           className="input"
+          aria-label="Password"
         />
         <button type="submit" className="btn btn-primary btn-block" disabled={loading}>
           {loading ? 'Creating account...' : 'Register'}

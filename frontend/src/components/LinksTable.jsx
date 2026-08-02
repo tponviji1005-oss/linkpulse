@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { deleteLink } from '../api/links.js';
 import EditLinkModal from './EditLinkModal.jsx';
 import QRCodeModal from './QRCodeModal.jsx';
+import { healthMeta } from '../utils/health.js';
 
 function StatusBadges({ link }) {
   const isExpired = link.expiresAt && new Date(link.expiresAt) < new Date();
@@ -89,12 +90,14 @@ function LinksTable({ links, onRefresh, loading, selectedIds, onSelect, onSelect
                   checked={allSelected}
                   ref={(el) => { if (el) el.indeterminate = someSelected; }}
                   onChange={onSelectAll}
+                  aria-label="Select all links"
                 />
               </th>
             )}
             <th>Short URL</th>
             <th>Original URL</th>
             <th>Clicks</th>
+            <th>Health</th>
             <th>Created</th>
             <th>Actions</th>
           </tr>
@@ -108,6 +111,7 @@ function LinksTable({ links, onRefresh, loading, selectedIds, onSelect, onSelect
                     type="checkbox"
                     checked={selectedIds.includes(link.id)}
                     onChange={() => onSelect(link.id)}
+                    aria-label={`Select link ${link.shortCode}`}
                   />
                 </td>
               )}
@@ -117,6 +121,7 @@ function LinksTable({ links, onRefresh, loading, selectedIds, onSelect, onSelect
                   target="_blank"
                   rel="noopener noreferrer"
                   className="short-link"
+                  aria-label={`Open short link /${link.shortCode} in new tab`}
                 >
                   /{link.shortCode}
                 </a>
@@ -126,12 +131,23 @@ function LinksTable({ links, onRefresh, loading, selectedIds, onSelect, onSelect
                 {link.originalUrl}
               </td>
               <td>{link._count?.clicks ?? link.clickCount ?? 0}</td>
+              <td>
+                {link.healthScore !== undefined ? (
+                  <span className="health-cell">
+                    <span className="health-emoji">{healthMeta(link.healthLabel).emoji}</span>
+                    <span className="health-cell-score">{link.healthScore}</span>
+                  </span>
+                ) : (
+                  <span className="health-cell-muted">&mdash;</span>
+                )}
+              </td>
               <td>{new Date(link.createdAt).toLocaleDateString()}</td>
               <td className="actions-cell">
                 <button
                   className="btn btn-sm btn-qr"
                   onClick={() => setQrLink(link)}
                   disabled={deletingId === link.id}
+                  aria-label={`Show QR code for /${link.shortCode}`}
                 >
                   QR
                 </button>
@@ -139,6 +155,7 @@ function LinksTable({ links, onRefresh, loading, selectedIds, onSelect, onSelect
                   className="btn btn-sm btn-analytics"
                   onClick={() => navigate(`/analytics/${link.id}`, { state: link })}
                   disabled={deletingId === link.id}
+                  aria-label={`View analytics for /${link.shortCode}`}
                 >
                   Analytics
                 </button>
@@ -146,6 +163,7 @@ function LinksTable({ links, onRefresh, loading, selectedIds, onSelect, onSelect
                   className="btn btn-sm btn-edit"
                   onClick={() => setEditingLink(link)}
                   disabled={deletingId === link.id}
+                  aria-label={`Edit /${link.shortCode}`}
                 >
                   Edit
                 </button>
@@ -153,6 +171,7 @@ function LinksTable({ links, onRefresh, loading, selectedIds, onSelect, onSelect
                   className="btn btn-sm btn-delete"
                   onClick={() => handleDelete(link)}
                   disabled={deletingId === link.id}
+                  aria-label={`Delete /${link.shortCode}`}
                 >
                   {deletingId === link.id ? '...' : 'Delete'}
                 </button>

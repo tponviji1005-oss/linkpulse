@@ -15,31 +15,12 @@ const CLICK_SELECT = {
   createdAt: true,
 };
 
-async function createClick(data) {
-  return prisma.click.create({ data, select: CLICK_SELECT });
+async function createClick(data, client = prisma) {
+  return client.click.create({ data, select: CLICK_SELECT });
 }
 
-async function findClicksByLink(linkId) {
-  return prisma.click.findMany({
-    where: { linkId },
-    select: CLICK_SELECT,
-    orderBy: { createdAt: "desc" },
-  });
-}
-
-async function countClicks(linkId) {
-  return prisma.click.count({ where: { linkId } });
-}
-
-async function findClicksByPeriod(linkId, start, end) {
-  return prisma.click.findMany({
-    where: {
-      linkId,
-      createdAt: { gte: start, lte: end },
-    },
-    select: CLICK_SELECT,
-    orderBy: { createdAt: "desc" },
-  });
+async function countClicks(linkId, client = prisma) {
+  return client.click.count({ where: { linkId } });
 }
 
 async function countClicksByRange(linkId, start, end, isBot) {
@@ -52,8 +33,8 @@ async function countClicksByRange(linkId, start, end, isBot) {
   });
 }
 
-async function countClicksSince(linkId, ipAddress, since) {
-  return prisma.click.count({
+async function countClicksSince(linkId, ipAddress, since, client = prisma) {
+  return client.click.count({
     where: {
       linkId,
       ipAddress,
@@ -62,8 +43,8 @@ async function countClicksSince(linkId, ipAddress, since) {
   });
 }
 
-async function flagLink(linkId) {
-  return prisma.link.updateMany({
+async function flagLink(linkId, client = prisma) {
+  return client.link.updateMany({
     where: { id: linkId, isFlagged: false },
     data: { isFlagged: true },
   });
@@ -139,9 +120,7 @@ async function getClickFields(linkId, fields, start, end, isBot) {
 
 module.exports = {
   createClick,
-  findClicksByLink,
   countClicks,
-  findClicksByPeriod,
   countClicksByRange,
   countClicksSince,
   flagLink,

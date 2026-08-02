@@ -36,6 +36,7 @@ function Login() {
           onChange={(e) => setEmail(e.target.value)}
           required
           className="input"
+          aria-label="Email"
         />
         <input
           type="password"
@@ -44,6 +45,7 @@ function Login() {
           onChange={(e) => setPassword(e.target.value)}
           required
           className="input"
+          aria-label="Password"
         />
         <button type="submit" className="btn btn-primary btn-block" disabled={loading}>
           {loading ? 'Logging in...' : 'Login'}

@@ -54,6 +54,7 @@ function CreateLinkForm({ onCreated }) {
           onChange={(e) => setOriginalUrl(e.target.value)}
           required
           className="input"
+          aria-label="Original URL"
         />
         <button type="submit" className="btn btn-primary" disabled={loading}>
           {loading ? 'Creating...' : 'Create'}
@@ -63,11 +64,13 @@ function CreateLinkForm({ onCreated }) {
         type="button"
         className="btn btn-sm btn-options-toggle"
         onClick={() => setShowOptions(!showOptions)}
+        aria-expanded={showOptions}
+        aria-controls="create-link-options"
       >
         {showOptions ? 'Hide options' : 'Protection options'}
       </button>
       {showOptions && (
-        <div className="form-options">
+        <div className="form-options" id="create-link-options">
           <label className="form-option-label">
             Custom alias (optional)
             <input

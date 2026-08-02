@@ -65,9 +65,5 @@ const isRepeatedClick = (recentClicks) => recentClicks + 1 >= 5;
 
 module.exports = {
   isBot,
-  isKnownBotUserAgent,
-  isMissingUserAgent,
-  isAutomatedUserAgent,
-  isSuspiciousHeaders,
   isRepeatedClick,
 };

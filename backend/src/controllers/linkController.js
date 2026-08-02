@@ -8,10 +8,17 @@ const { dashboardSummaryKey, topLinksKey } = require('../utils/cacheKeys');
 const { getCachedLink, setCachedLink, deleteCachedLink } = require('../lib/redirectCache');
 const { parsePagination, paginateResponse } = require('../utils/pagination');
 const { isValidUUID } = require('../utils/uuid');
+const { calculateHealthScore } = require('../utils/healthScore');
 const { invalidateLinkAnalytics } = require('./analyticsController');
+const { detectCountry, detectDeviceType, extractIPAddress } = require('../helpers/analyticsHelper');
 const analyticsService = require('../services/analyticsService');
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+
+const logClickFailure = (linkId, error) => {
+  const message = error && error.message ? error.message : String(error);
+  console.error(`[ClickRecordingFailed] linkId=${linkId} error=${message}`);
+};
 
 const RESERVED_SHORT_CODES = [
   'api',
@@ -54,6 +61,13 @@ const parseTitle = (value) => {
 
 const MAX_SHORT_CODE_RETRIES = 5;
 
+const COUNTRY_CODE_REGEX = /^[A-Za-z]{2}$/;
+
+const DEVICE_TYPES = ['mobile', 'desktop', 'tablet'];
+
+const AB_WEIGHT_TOTAL = 100;
+const AB_MIN_VARIANTS = 2;
+
 const SELECT_LINK_FIELDS = {
   id: true,
   shortCode: true,
@@ -64,6 +78,10 @@ const SELECT_LINK_FIELDS = {
   maxClicks: true,
   isFlagged: true,
   createdAt: true,
+  passwordHash: true,
+  geoRules: true,
+  deviceRules: true,
+  abVariants: true,
 };
 
 function stripPasswordHash(link) {
@@ -240,9 +258,65 @@ const getMyLinks = async (req, res, next) => {
       prisma.link.count({ where }),
     ]);
 
+    const ids = links.map((l) => l.id);
+
+    const allTime = new Map();
+    const recent7d = new Map();
+    const uniqueVisitors = new Map();
+
+    if (ids.length > 0) {
+      const weekStart = new Date();
+      weekStart.setDate(weekStart.getDate() - 7);
+
+      const [clickStats, recentStats, visitorStats] = await Promise.all([
+        prisma.click.groupBy({
+          by: ['linkId', 'isBot'],
+          where: { linkId: { in: ids } },
+          _count: { _all: true },
+        }),
+        prisma.click.groupBy({
+          by: ['linkId'],
+          where: { linkId: { in: ids }, isBot: false, createdAt: { gte: weekStart } },
+          _count: { _all: true },
+        }),
+        prisma.click.groupBy({
+          by: ['linkId', 'ipAddress'],
+          where: { linkId: { in: ids }, isBot: false, ipAddress: { not: null } },
+          _count: { _all: true },
+        }),
+      ]);
+
+      for (const row of clickStats) {
+        const entry = allTime.get(row.linkId) || { total: 0, real: 0 };
+        entry.total += row._count._all;
+        if (!row.isBot) entry.real += row._count._all;
+        allTime.set(row.linkId, entry);
+      }
+
+      for (const row of recentStats) {
+        recent7d.set(row.linkId, row._count._all);
+      }
+
+      for (const row of visitorStats) {
+        uniqueVisitors.set(row.linkId, (uniqueVisitors.get(row.linkId) || 0) + 1);
+      }
+    }
+
+    const enriched = links.map((link) => {
+      const stats = allTime.get(link.id) || { total: 0, real: 0 };
+      const { healthScore, healthLabel } = calculateHealthScore({
+        totalClicks: stats.total,
+        realClicks: stats.real,
+        isFlagged: link.isFlagged,
+        recentRealClicks: recent7d.get(link.id) || 0,
+        uniqueVisitors: uniqueVisitors.get(link.id) || 0,
+      });
+      return { ...stripPasswordHash(link), healthScore, healthLabel };
+    });
+
     res.status(200).json(
       paginateResponse(
-        links.map(stripPasswordHash),
+        enriched,
         total,
         pagination.page,
         pagination.limit,
@@ -411,6 +485,230 @@ const deleteLink = async (req, res, next) => {
   }
 };
 
+const updateGeoRules = async (req, res, next) => {
+  try {
+    if (!isValidUUID(req.params.id)) {
+      return res.status(400).json({ error: 'Invalid link ID format' });
+    }
+
+    const existing = await prisma.link.findFirst({
+      where: {
+        id: req.params.id,
+        userId: req.user.userId,
+      },
+      select: {
+        id: true,
+        shortCode: true,
+      },
+    });
+
+    if (!existing) {
+      return res.status(404).json({ error: 'Link not found' });
+    }
+
+    const { rules } = req.body;
+
+    if (!Array.isArray(rules)) {
+      return res.status(400).json({ error: 'rules must be an array of { countryCode, destinationUrl }' });
+    }
+
+    const seen = new Set();
+    for (const rule of rules) {
+      if (!rule || typeof rule.countryCode !== 'string' || !COUNTRY_CODE_REGEX.test(rule.countryCode.trim())) {
+        return res.status(400).json({ error: 'Each rule needs a valid 2-letter ISO country code' });
+      }
+      const code = rule.countryCode.trim().toUpperCase();
+      if (seen.has(code)) {
+        return res.status(400).json({ error: `Duplicate country code: ${code}` });
+      }
+      seen.add(code);
+      if (!rule.destinationUrl || !validator.isURL(rule.destinationUrl)) {
+        return res.status(400).json({ error: `Invalid destination URL for country ${code}` });
+      }
+    }
+
+    const normalized = rules.map((rule) => ({
+      countryCode: rule.countryCode.trim().toUpperCase(),
+      destinationUrl: rule.destinationUrl,
+    }));
+
+    await prisma.$transaction(async (tx) => {
+      await tx.geoRule.deleteMany({ where: { linkId: existing.id } });
+      if (normalized.length > 0) {
+        await tx.geoRule.createMany({
+          data: normalized.map((rule) => ({ ...rule, linkId: existing.id })),
+        });
+      }
+    });
+
+    await deleteCachedLink(existing.shortCode);
+
+    res.status(200).json({ message: 'Geo rules updated', geoRules: normalized });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const updateDeviceRules = async (req, res, next) => {
+  try {
+    if (!isValidUUID(req.params.id)) {
+      return res.status(400).json({ error: 'Invalid link ID format' });
+    }
+
+    const existing = await prisma.link.findFirst({
+      where: {
+        id: req.params.id,
+        userId: req.user.userId,
+      },
+      select: {
+        id: true,
+        shortCode: true,
+      },
+    });
+
+    if (!existing) {
+      return res.status(404).json({ error: 'Link not found' });
+    }
+
+    const { rules } = req.body;
+
+    if (!Array.isArray(rules)) {
+      return res.status(400).json({ error: 'rules must be an array of { deviceType, destinationUrl }' });
+    }
+
+    const seen = new Set();
+    for (const rule of rules) {
+      if (!rule || typeof rule.deviceType !== 'string' || !DEVICE_TYPES.includes(rule.deviceType.trim().toLowerCase())) {
+        return res.status(400).json({ error: 'Each rule needs a valid deviceType: mobile, desktop, or tablet' });
+      }
+      const type = rule.deviceType.trim().toLowerCase();
+      if (seen.has(type)) {
+        return res.status(400).json({ error: `Duplicate device type: ${type}` });
+      }
+      seen.add(type);
+      if (!rule.destinationUrl || !validator.isURL(rule.destinationUrl)) {
+        return res.status(400).json({ error: `Invalid destination URL for device ${type}` });
+      }
+    }
+
+    const normalized = rules.map((rule) => ({
+      deviceType: rule.deviceType.trim().toLowerCase(),
+      destinationUrl: rule.destinationUrl,
+    }));
+
+    await prisma.$transaction(async (tx) => {
+      await tx.deviceRule.deleteMany({ where: { linkId: existing.id } });
+      if (normalized.length > 0) {
+        await tx.deviceRule.createMany({
+          data: normalized.map((rule) => ({ ...rule, linkId: existing.id })),
+        });
+      }
+    });
+
+    await deleteCachedLink(existing.shortCode);
+
+    res.status(200).json({ message: 'Device rules updated', deviceRules: normalized });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const updateABVariants = async (req, res, next) => {
+  try {
+    if (!isValidUUID(req.params.id)) {
+      return res.status(400).json({ error: 'Invalid link ID format' });
+    }
+
+    const existing = await prisma.link.findFirst({
+      where: {
+        id: req.params.id,
+        userId: req.user.userId,
+      },
+      select: {
+        id: true,
+        shortCode: true,
+      },
+    });
+
+    if (!existing) {
+      return res.status(404).json({ error: 'Link not found' });
+    }
+
+    const { variants } = req.body;
+
+    if (!Array.isArray(variants)) {
+      return res.status(400).json({ error: 'variants must be an array of { destinationUrl, weight, label }' });
+    }
+
+    if (variants.length > 0 && variants.length < AB_MIN_VARIANTS) {
+      return res.status(400).json({ error: `A/B testing requires at least ${AB_MIN_VARIANTS} variants` });
+    }
+
+    let weightSum = 0;
+    for (const variant of variants) {
+      if (!variant || !variant.destinationUrl || !validator.isURL(variant.destinationUrl)) {
+        return res.status(400).json({ error: 'Each variant needs a valid destination URL' });
+      }
+      if (!Number.isInteger(variant.weight) || variant.weight <= 0 || variant.weight > AB_WEIGHT_TOTAL) {
+        return res.status(400).json({ error: 'Each variant weight must be a positive integer (1-100)' });
+      }
+      if (variant.label != null && typeof variant.label !== 'string') {
+        return res.status(400).json({ error: 'Variant label must be a string' });
+      }
+      weightSum += variant.weight;
+    }
+
+    if (variants.length > 0 && weightSum !== AB_WEIGHT_TOTAL) {
+      return res.status(400).json({ error: `A/B variant weights must sum to exactly ${AB_WEIGHT_TOTAL} (got ${weightSum})` });
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.aBVariant.deleteMany({ where: { linkId: existing.id } });
+      if (variants.length > 0) {
+        await tx.aBVariant.createMany({
+          data: variants.map((variant) => ({
+            linkId: existing.id,
+            destinationUrl: variant.destinationUrl,
+            weight: variant.weight,
+            label: variant.label != null && variant.label !== '' ? variant.label : null,
+          })),
+        });
+      }
+    });
+
+    await deleteCachedLink(existing.shortCode);
+
+    res.status(200).json({ message: 'A/B variants updated', variants: variants.map((v) => ({ ...v })) });
+  } catch (error) {
+    next(error);
+  }
+};
+
+function hashStringToInt(value) {
+  let hash = 0;
+  for (let i = 0; i < value.length; i++) {
+    hash = (hash * 31 + value.charCodeAt(i)) >>> 0;
+  }
+  return hash;
+}
+
+// Pick a weighted A/B variant deterministically per visitor so the SAME
+// visitor keeps getting the SAME variant across visits. We hash a stable
+// visitor identifier (the request IP, same one geo detection uses) into a
+// 0-99 value, then map it into the weighted cumulative buckets.
+function pickABVariant(variants, req) {
+  const identifier = extractIPAddress(req) || req.ip || req.socket?.remoteAddress || 'unknown';
+  const bucket = hashStringToInt(identifier) % AB_WEIGHT_TOTAL;
+  let cumulative = 0;
+  for (const variant of variants) {
+    cumulative += variant.weight;
+    if (bucket < cumulative) {
+      return variant;
+    }
+  }
+  return variants[variants.length - 1];
+}
+
 const redirectLink = async (req, res, next) => {
   try {
     const { shortCode } = req.params;
@@ -421,19 +719,22 @@ const redirectLink = async (req, res, next) => {
       link = await prisma.link.findFirst({
         where: {
           shortCode,
-          isActive: true,
         },
         select: {
           id: true,
           shortCode: true,
           originalUrl: true,
+          isActive: true,
           expiresAt: true,
           maxClicks: true,
           passwordHash: true,
+          geoRules: true,
+          deviceRules: true,
+          abVariants: true,
         },
       });
 
-      if (link) {
+      if (link && link.isActive) {
         await setCachedLink(shortCode, link);
       }
     }
@@ -444,6 +745,16 @@ const redirectLink = async (req, res, next) => {
 
     if (link.expiresAt && new Date(link.expiresAt) < new Date()) {
       return res.status(410).json({ error: 'This link has expired.' });
+    }
+
+    if (link.isActive === false) {
+      if (link.maxClicks != null) {
+        const clickCount = await prisma.click.count({ where: { linkId: link.id } });
+        if (clickCount >= link.maxClicks) {
+          return res.status(410).json({ error: 'Link click limit reached' });
+        }
+      }
+      return res.status(404).json({ error: 'Short link not found' });
     }
 
     if (link.maxClicks != null) {
@@ -464,13 +775,55 @@ const redirectLink = async (req, res, next) => {
       );
     }
 
-    const isDev = () => process.env.NODE_ENV === 'development';
-    analyticsService.recordClick({ linkId: link.id, req }).catch((err) => {
-      if (isDev()) console.warn(`Click record error: ${err.message}`);
-    });
+    // Precedence: geo rule > device rule > A/B variant > default originalUrl.
+    // A matching geo rule wins over a device rule; when neither matches, an
+    // A/B variant is chosen (weighted, sticky per visitor); and when no rules
+    // or variants exist at all, the link's originalUrl is used (backward
+    // compatible).
+    let redirectType = 'default';
+    let targetUrl = link.originalUrl;
+    let abVariantLabel = null;
 
-    res.redirect(link.originalUrl);
-  } catch (error) {
+    if (link.geoRules && link.geoRules.length > 0) {
+      const country = detectCountry(req);
+      const match = country
+        ? link.geoRules.find((rule) => rule.countryCode === country)
+        : null;
+      if (match) {
+        redirectType = 'geo';
+        targetUrl = match.destinationUrl;
+      }
+    }
+
+    if (redirectType === 'default' && link.deviceRules && link.deviceRules.length > 0) {
+      const deviceType = detectDeviceType(req);
+      const match = link.deviceRules.find((rule) => rule.deviceType === deviceType);
+      if (match) {
+        redirectType = 'device';
+        targetUrl = match.destinationUrl;
+      }
+    }
+
+    if (redirectType === 'default' && link.abVariants && link.abVariants.length >= AB_MIN_VARIANTS) {
+      const variant = pickABVariant(link.abVariants, req);
+      redirectType = 'ab_test';
+      targetUrl = variant.destinationUrl;
+      abVariantLabel = variant.label || variant.destinationUrl;
+    }
+
+    let clickResult;
+    try {
+      clickResult = await analyticsService.recordClickWithLimitCheck({ linkId: link.id, req, redirectType, abVariantLabel });
+    } catch (error) {
+      logClickFailure(link.id, error);
+    }
+
+    if (clickResult && clickResult.status === 'limit_reached') {
+      await deleteCachedLink(link.shortCode);
+      return res.status(410).json({ error: 'Link click limit reached' });
+    }
+
+    res.redirect(targetUrl);  } catch (error) {
     next(error);
   }
 };
@@ -520,9 +873,8 @@ const verifyPassword = async (req, res, next) => {
       return res.status(401).json({ error: 'Incorrect password' });
     }
 
-    const isDev = () => process.env.NODE_ENV === 'development';
     analyticsService.recordClick({ linkId: link.id, req }).catch((err) => {
-      if (isDev()) console.warn(`Click record error: ${err.message}`);
+      logClickFailure(link.id, err);
     });
 
     res.status(200).json({ success: true, redirectUrl: link.originalUrl });
@@ -626,6 +978,9 @@ module.exports = {
   getLink,
   updateLink,
   deleteLink,
+  updateGeoRules,
+  updateDeviceRules,
+  updateABVariants,
   redirectLink,
   verifyPassword,
   getLinkAnalytics,

@@ -44,6 +44,7 @@ function PasswordGate() {
             required
             className="input"
             autoFocus
+            aria-label="Link password"
           />
           <button type="submit" className="btn btn-primary btn-block" disabled={loading}>
             {loading ? 'Verifying...' : 'Continue'}

@@ -1,8 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { getAdvancedAnalytics } from '../api/links.js';
 import { AnalyticsSkeleton } from '../components/Skeleton.jsx';
+import { healthMeta } from '../utils/health.js';
+import { getPredictionColor } from '../utils/prediction.js';
+import { getPriorityColor } from '../utils/dashboardSummary.js';
 import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
@@ -22,12 +25,11 @@ const CHART_COLORS = [
   '#06d6a0', '#ffd166', '#ef476f', '#118ab2', '#073b4c',
 ];
 
-function KPICard({ label, value, sub }) {
+function KPICard({ label, value }) {
   return (
     <div className="stat-card">
       <span className="stat-value">{value}</span>
       <span className="stat-label">{label}</span>
-      {sub && <span className="stat-sub">{sub}</span>}
     </div>
   );
 }
@@ -42,8 +44,8 @@ function ChartCard({ title, children, className }) {
 }
 
 function BreakdownList({ data }) {
-  const entries = Object.entries(data);
-  const total = entries.reduce((sum, [, v]) => sum + v, 0);
+  const entries = useMemo(() => Object.entries(data), [data]);
+  const total = useMemo(() => entries.reduce((sum, [, v]) => sum + v, 0), [entries]);
 
   if (total === 0) {
     return <p className="empty-msg">No data available.</p>;
@@ -68,10 +70,10 @@ function BreakdownList({ data }) {
 }
 
 function HourlyHeatmap({ data }) {
-  const maxClicks = Math.max(...data.map((d) => d.clicks), 1);
+  const maxClicks = useMemo(() => Math.max(...data.map((d) => d.clicks), 1), [data]);
 
   return (
-    <div className="hourly-heatmap">
+    <div className="hourly-heatmap" role="img" aria-label="Hourly click distribution">
       {data.map((d) => {
         const intensity = d.clicks / maxClicks;
         return (
@@ -91,14 +93,16 @@ function HourlyHeatmap({ data }) {
 }
 
 function PieChartBreakdown({ data }) {
-  const entries = Object.entries(data);
-  const total = entries.reduce((sum, [, v]) => sum + v, 0);
+  const entries = useMemo(() => Object.entries(data), [data]);
+  const total = useMemo(() => entries.reduce((sum, [, v]) => sum + v, 0), [entries]);
+  const chartData = useMemo(
+    () => entries.map(([name, value]) => ({ name, value })),
+    [entries],
+  );
 
   if (total === 0) {
     return <p className="empty-msg">No data available.</p>;
   }
-
-  const chartData = entries.map(([name, value]) => ({ name, value }));
 
   return (
     <div className="pie-chart-container">
@@ -135,14 +139,17 @@ function Analytics() {
 
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [period, setPeriod] = useState('all');
 
   const fetchAnalytics = useCallback(async (p) => {
     setLoading(true);
+    setError(null);
     try {
       const result = await getAdvancedAnalytics(id, p);
       setData(result);
     } catch (err) {
+      setError(err.message);
       toast.error(err.message);
     } finally {
       setLoading(false);
@@ -160,10 +167,30 @@ function Analytics() {
   if (loading && !data) {
     return (
       <div className="analytics-page">
-        <button className="btn btn-back" onClick={() => navigate('/dashboard')}>
+        <button className="btn btn-back" onClick={() => navigate('/dashboard')} aria-label="Back to Dashboard">
           &larr; Back to Dashboard
         </button>
         <AnalyticsSkeleton />
+      </div>
+    );
+  }
+
+  if (!data && error) {
+    return (
+      <div className="analytics-page">
+        <button className="btn btn-back" onClick={() => navigate('/dashboard')} aria-label="Back to Dashboard">
+          &larr; Back to Dashboard
+        </button>
+        <div className="analytics-card">
+          <div className="empty-state">
+            <div className="empty-state-icon">&#9888;</div>
+            <h3>Could not load analytics</h3>
+            <p>{error}</p>
+            <button className="btn btn-primary" onClick={() => fetchAnalytics(period)}>
+              Try Again
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -172,7 +199,7 @@ function Analytics() {
 
   return (
     <div className="analytics-page">
-      <button className="btn btn-back" onClick={() => navigate('/dashboard')}>
+      <button className="btn btn-back" onClick={() => navigate('/dashboard')} aria-label="Back to Dashboard">
         &larr; Back to Dashboard
       </button>
 
@@ -194,6 +221,7 @@ function Analytics() {
               className={`btn btn-sm ${period === p.value ? 'btn-primary' : 'btn-page'}`}
               onClick={() => handlePeriodChange(p.value)}
               disabled={loading}
+              aria-pressed={period === p.value}
             >
               {p.label}
             </button>
@@ -201,12 +229,35 @@ function Analytics() {
         </div>
       </div>
 
-      {loading && <div className="loading-overlay"><span className="spinner" /></div>}
+      {loading && (
+        <div className="loading-overlay" role="status" aria-live="polite">
+          <span className="spinner" />
+        </div>
+      )}
 
       {data.link?.isFlagged && (
         <div className="analytics-warning" role="alert">
           <span className="analytics-warning-icon">&#9888;</span>
           Suspicious traffic detected
+        </div>
+      )}
+
+      {data.dashboardSummary && (
+        <div className="analytics-card executive-card">
+          <h3 className="analytics-card-title">&#129302; AI Executive Summary</h3>
+          <h4 className="executive-title">{data.dashboardSummary.title}</h4>
+          <p className="executive-overview">{data.dashboardSummary.overview}</p>
+          <div className="executive-priority">
+            <span className="executive-priority-label">Priority</span>
+            <span className={`executive-priority-badge priority-${getPriorityColor(data.dashboardSummary.priority)}`}>
+              {data.dashboardSummary.priority}
+            </span>
+          </div>
+          <ul className="executive-highlights">
+            {data.dashboardSummary.highlights.map((item, i) => (
+              <li key={i}>{item}</li>
+            ))}
+          </ul>
         </div>
       )}
 
@@ -216,6 +267,101 @@ function Analytics() {
         <KPICard label="Real Clicks" value={data.realClicks} />
         <KPICard label="Bot Clicks" value={data.botClicks} />
       </div>
+
+      {data.healthScore !== undefined && (
+        <div className="health-card">
+          <span className={`health-dot ${healthMeta(data.healthLabel).className}`} aria-hidden="true" />
+          <div className="health-card-info">
+            <span className="health-card-title">Health Score</span>
+            <span className="health-card-score">{data.healthScore} / 100</span>
+            <span className="health-card-sub">{data.healthLabel}</span>
+          </div>
+        </div>
+      )}
+
+      {data.summary && (
+        <div className="analytics-card recommendations-card">
+          <h3 className="analytics-card-title">AI Recommendations</h3>
+          <p className="ai-summary">{data.summary}</p>
+          <ul className="recommendation-list">
+            {data.recommendations.map((rec, i) => (
+              <li key={i}>{rec}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {data.prediction && (
+        <div className="analytics-card prediction-card">
+          <h3 className="analytics-card-title">&#128200; Performance Prediction</h3>
+          <div className="prediction-grid">
+            <div className="prediction-metric">
+              <span className="prediction-label">Predicted Next 7 Days</span>
+              <span className="prediction-value">{data.prediction.predictedClicks}</span>
+              <span className="prediction-unit">Clicks</span>
+            </div>
+            <div className="prediction-metric">
+              <span className="prediction-label">Trend</span>
+              <span className={`prediction-trend ${getPredictionColor(data.prediction.trend)}`}>
+                {data.prediction.trend}
+              </span>
+            </div>
+            <div className="prediction-metric">
+              <span className="prediction-label">Confidence</span>
+              <span className="prediction-value">{data.prediction.confidence}%</span>
+            </div>
+          </div>
+          <p className="prediction-message">{data.prediction.message}</p>
+        </div>
+      )}
+
+      {data.trafficInsights && (
+        <div className="analytics-card traffic-card">
+          <h3 className="analytics-card-title">&#127758; Smart Traffic Insights</h3>
+          <div className="traffic-grid">
+            <div className="traffic-item">
+              <span className="traffic-label">Best Hour</span>
+              <span className="traffic-value">{data.trafficInsights.bestHour || '\u2014'}</span>
+            </div>
+            <div className="traffic-item">
+              <span className="traffic-label">Best Day</span>
+              <span className="traffic-value">{data.trafficInsights.bestDay || '\u2014'}</span>
+            </div>
+            <div className="traffic-item">
+              <span className="traffic-label">Best Device</span>
+              <span className="traffic-value">{data.trafficInsights.bestDevice || '\u2014'}</span>
+            </div>
+            <div className="traffic-item">
+              <span className="traffic-label">Best Browser</span>
+              <span className="traffic-value">{data.trafficInsights.bestBrowser || '\u2014'}</span>
+            </div>
+            <div className="traffic-item">
+              <span className="traffic-label">Best Country</span>
+              <span className="traffic-value">{data.trafficInsights.bestCountry || '\u2014'}</span>
+            </div>
+            <div className="traffic-item">
+              <span className="traffic-label">Best Referrer</span>
+              <span className="traffic-value">{data.trafficInsights.bestReferrer || '\u2014'}</span>
+            </div>
+          </div>
+          <p className="traffic-message">{data.trafficInsights.insight}</p>
+        </div>
+      )}
+
+      {data.optimization && (
+        <div className="analytics-card optimization-card">
+          <h3 className="analytics-card-title">&#9881; Link Optimization</h3>
+          <div className="optimization-score-row">
+            <span className="optimization-score">{data.optimization.optimizationScore}</span>
+            <span className="optimization-label">{data.optimization.optimizationLabel}</span>
+          </div>
+          <ul className="optimization-list">
+            {data.optimization.improvements.map((item, i) => (
+              <li key={i}>&#10003; {item}</li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {data.totalClicks === 0 ? (
         <div className="analytics-card">
@@ -275,13 +421,13 @@ function Analytics() {
 
           <div className="analytics-grid-3">
             <ChartCard title="Browser Breakdown">
-              <PieChartBreakdown data={data.browserBreakdown} name="Browser" />
+              <PieChartBreakdown data={data.browserBreakdown} />
             </ChartCard>
             <ChartCard title="Operating System">
-              <PieChartBreakdown data={data.osBreakdown} name="OS" />
+              <PieChartBreakdown data={data.osBreakdown} />
             </ChartCard>
             <ChartCard title="Device Breakdown">
-              <PieChartBreakdown data={data.deviceBreakdown} name="Device" />
+              <PieChartBreakdown data={data.deviceBreakdown} />
             </ChartCard>
           </div>
 

@@ -2,7 +2,14 @@ const prisma = require('../config/prisma');
 const { getCache, setCache, invalidateCache } = require('../utils/cache');
 const { analyticsKey } = require('../utils/cacheKeys');
 const { isValidUUID } = require('../utils/uuid');
+const { calculateHealthScore } = require('../utils/healthScore');
+const { generateRecommendations } = require('../utils/recommendationEngine');
+const { generatePrediction } = require('../utils/predictionEngine');
+const { generateDashboardSummary } = require('../utils/dashboardSummary');
+const { generateTrafficInsights } = require('../utils/trafficInsights');
+const { calculateOptimizationScore } = require('../utils/optimizationScore');
 const analyticsService = require('../services/analyticsService');
+const { getDateRange } = require('../helpers/analyticsHelper');
 
 const ANALYTICS_CACHE_TTL = 120;
 
@@ -17,33 +24,11 @@ function getReferrerHostname(referer) {
   }
 }
 
-function getDateRange(period) {
-  const now = new Date();
-  switch (period) {
-    case 'today': {
-      const start = new Date(now);
-      start.setHours(0, 0, 0, 0);
-      return { start, end: now };
-    }
-    case '7d': {
-      const start = new Date(now);
-      start.setDate(start.getDate() - 7);
-      return { start, end: now };
-    }
-    case '30d': {
-      const start = new Date(now);
-      start.setDate(start.getDate() - 30);
-      return { start, end: now };
-    }
-    case '90d': {
-      const start = new Date(now);
-      start.setDate(start.getDate() - 90);
-      return { start, end: now };
-    }
-    case 'all':
-    default:
-      return { start: new Date(0), end: now };
-  }
+function getTopFromBreakdown(breakdown, total) {
+  const entries = Object.entries(breakdown).sort((a, b) => b[1] - a[1]);
+  if (entries.length === 0) return { top: null, share: 0 };
+  const [top, count] = entries[0];
+  return { top, share: total > 0 ? (count / total) * 100 : 0 };
 }
 
 async function verifyLinkOwnership(linkId, userId) {
@@ -65,7 +50,7 @@ const getAdvancedAnalytics = async (req, res, next) => {
 
     const link = await prisma.link.findFirst({
       where: { id, userId: req.user.userId },
-      select: { id: true, shortCode: true, originalUrl: true, title: true, passwordHash: true, isActive: true, expiresAt: true, isFlagged: true },
+      select: { id: true, shortCode: true, originalUrl: true, title: true, passwordHash: true, isActive: true, expiresAt: true, isFlagged: true, maxClicks: true },
     });
 
     if (!link) {
@@ -80,23 +65,37 @@ const getAdvancedAnalytics = async (req, res, next) => {
 
     const { start, end } = getDateRange(period);
 
-    const clicks = await prisma.click.findMany({
-      where: {
-        linkId: id,
-        createdAt: { gte: start, lte: end },
-      },
-      select: {
-        ipAddress: true,
-        browser: true,
-        os: true,
-        device: true,
-        referer: true,
-        country: true,
-        isBot: true,
-        createdAt: true,
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+    const weekStart = new Date();
+    weekStart.setDate(weekStart.getDate() - 7);
+
+    const [clicks, recent7dRealClicks] = await Promise.all([
+      prisma.click.findMany({
+        where: {
+          linkId: id,
+          createdAt: { gte: start, lte: end },
+        },
+        select: {
+          ipAddress: true,
+          browser: true,
+          os: true,
+          device: true,
+          referer: true,
+          country: true,
+          redirectType: true,
+          abVariantLabel: true,
+          isBot: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.click.count({
+        where: {
+          linkId: id,
+          isBot: false,
+          createdAt: { gte: weekStart },
+        },
+      }),
+    ]);
 
     const totalClicks = clicks.length;
     const uniqueIps = new Set();
@@ -106,6 +105,8 @@ const getAdvancedAnalytics = async (req, res, next) => {
     const deviceBreakdown = {};
     const referrerBreakdown = {};
     const countryBreakdown = {};
+    const redirectTypeBreakdown = {};
+    const abVariantBreakdown = {};
     const dailyTrend = {};
     const weeklyTrend = {};
     const monthlyTrend = {};
@@ -138,6 +139,13 @@ const getAdvancedAnalytics = async (req, res, next) => {
         countryBreakdown[click.country] = (countryBreakdown[click.country] || 0) + 1;
       }
 
+      const redirectType = click.redirectType || 'default';
+      redirectTypeBreakdown[redirectType] = (redirectTypeBreakdown[redirectType] || 0) + 1;
+
+      if (click.abVariantLabel) {
+        abVariantBreakdown[click.abVariantLabel] = (abVariantBreakdown[click.abVariantLabel] || 0) + 1;
+      }
+
       const date = click.createdAt.toISOString().split('T')[0];
       dailyTrend[date] = (dailyTrend[date] || 0) + 1;
 
@@ -155,6 +163,14 @@ const getAdvancedAnalytics = async (req, res, next) => {
 
     const uniqueClicks = uniqueIps.size;
     const realClicks = humanClicks;
+
+    const { healthScore, healthLabel } = calculateHealthScore({
+      totalClicks,
+      realClicks,
+      isFlagged: link.isFlagged,
+      recentRealClicks: recent7dRealClicks,
+      uniqueVisitors: uniqueClicks,
+    });
 
     const hasPassword = !!link.passwordHash;
     const protectedClicks = hasPassword ? totalClicks : 0;
@@ -187,6 +203,67 @@ const getAdvancedAnalytics = async (req, res, next) => {
         .sort((a, b) => b[1] - a[1])
         .reduce((acc, [k, v]) => { acc[k] = v; return acc; }, {});
 
+    const topCountryInfo = getTopFromBreakdown(countryBreakdown, realClicks);
+    const topDeviceInfo = getTopFromBreakdown(deviceBreakdown, realClicks);
+    const topBrowserInfo = getTopFromBreakdown(browserBreakdown, realClicks);
+    const topReferrerInfo = getTopFromBreakdown(referrerBreakdown, realClicks);
+
+    const { summary, recommendations } = generateRecommendations({
+      healthScore,
+      healthLabel,
+      totalClicks,
+      realClicks,
+      botClicks,
+      uniqueVisitors: uniqueClicks,
+      topCountry: topCountryInfo.top,
+      topCountryShare: topCountryInfo.share,
+      topDevice: topDeviceInfo.top,
+      topBrowser: topBrowserInfo.top,
+      topBrowserShare: topBrowserInfo.share,
+      topReferrer: topReferrerInfo.top,
+      hourlyDistribution: hourlyArray,
+      dailyTrend: dailyTrendArray,
+      isFlagged: link.isFlagged,
+      expiresAt: link.expiresAt,
+      maxClicks: link.maxClicks,
+      hasPassword,
+    });
+
+    const prediction = generatePrediction({ dailyTrend: dailyTrendArray });
+
+    const dashboardSummary = generateDashboardSummary({
+      healthScore,
+      healthLabel,
+      prediction,
+      summary,
+      recommendations,
+      totalClicks,
+      realClicks,
+      botClicks,
+      uniqueVisitors: uniqueClicks,
+      isFlagged: link.isFlagged,
+    });
+
+    const trafficInsights = generateTrafficInsights({
+      browserBreakdown: sortByValue(browserBreakdown),
+      deviceBreakdown: sortByValue(deviceBreakdown),
+      countryBreakdown: sortByValue(countryBreakdown),
+      referrerBreakdown: sortByValue(referrerBreakdown),
+      dailyTrend: dailyTrendArray,
+      hourlyDistribution: hourlyArray,
+    });
+
+    const optimization = calculateOptimizationScore({
+      healthScore,
+      realClickPercentage: totalClicks > 0 ? (realClicks / totalClicks) * 100 : 0,
+      uniqueVisitors: uniqueClicks,
+      isFlagged: link.isFlagged,
+      prediction,
+      topReferrer: topReferrerInfo.top,
+      topDevice: topDeviceInfo.top,
+      topBrowser: topBrowserInfo.top,
+    });
+
     const result = {
       link: {
         id: link.id,
@@ -210,6 +287,8 @@ const getAdvancedAnalytics = async (req, res, next) => {
       deviceBreakdown: sortByValue(deviceBreakdown),
       referrerBreakdown: sortByValue(referrerBreakdown),
       countryBreakdown: sortByValue(countryBreakdown),
+      redirectTypeBreakdown: sortByValue(redirectTypeBreakdown),
+      abVariantBreakdown: sortByValue(abVariantBreakdown),
       botClicks,
       humanClicks,
       realClicks,
@@ -217,6 +296,14 @@ const getAdvancedAnalytics = async (req, res, next) => {
       publicClicks,
       activeClicks,
       expiredClicks,
+      healthScore,
+      healthLabel,
+      summary,
+      recommendations,
+      prediction,
+      dashboardSummary,
+      trafficInsights,
+      optimization,
     };
 
     await setCache(cacheKey, result, ANALYTICS_CACHE_TTL);

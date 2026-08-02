@@ -194,6 +194,15 @@ function BulkManagement() {
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onClick={() => fileInputRef.current?.click()}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                fileInputRef.current?.click();
+              }
+            }}
+            role="button"
+            tabIndex={0}
+            aria-label="Upload CSV file. Drag and drop or press Enter to browse."
           >
             <input
               ref={fileInputRef}

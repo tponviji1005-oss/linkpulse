@@ -13,7 +13,7 @@ function Navbar() {
             <Link to="/dashboard" className="nav-link">Dashboard</Link>
             <Link to="/bulk" className="nav-link">Bulk</Link>
             <span className="navbar-user">{user.name || user.email}</span>
-            <button onClick={logout} className="btn btn-outline">Logout</button>
+            <button onClick={logout} className="btn btn-outline" aria-label="Log out">Logout</button>
           </>
         ) : (
           <>

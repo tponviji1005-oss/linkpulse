@@ -66,10 +66,15 @@ function QRCodeModal({ link, onClose }) {
 
   return (
     <div className="modal-overlay" ref={overlayRef} onClick={handleOverlayClick}>
-      <div className="modal-content">
+      <div
+        className="modal-content"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="qr-modal-title"
+      >
         <div className="modal-header">
-          <h2>QR Code</h2>
-          <button className="modal-close" onClick={onClose}>&times;</button>
+          <h2 id="qr-modal-title">QR Code</h2>
+          <button className="modal-close" onClick={onClose} aria-label="Close dialog">&times;</button>
         </div>
         <div className="qr-modal-body">
           <p className="qr-short-url">{shortUrl}</p>

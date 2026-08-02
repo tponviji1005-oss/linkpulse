@@ -13,9 +13,10 @@ function SearchFilter({ search, status, sort, onSearchChange, onStatusChange, on
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             className="input search-input"
+            aria-label="Search links"
           />
           {search && (
-            <button className="search-clear" onClick={() => onSearchChange('')} type="button">
+            <button className="search-clear" onClick={() => onSearchChange('')} type="button" aria-label="Clear search">
               &times;
             </button>
           )}
@@ -25,6 +26,7 @@ function SearchFilter({ search, status, sort, onSearchChange, onStatusChange, on
             value={status}
             onChange={(e) => onStatusChange(e.target.value)}
             className="input filter-select"
+            aria-label="Filter by status"
           >
             <option value="">All Status</option>
             <option value="active">Active</option>
@@ -37,6 +39,7 @@ function SearchFilter({ search, status, sort, onSearchChange, onStatusChange, on
             value={sort}
             onChange={(e) => onSortChange(e.target.value)}
             className="input filter-select"
+            aria-label="Sort links"
           >
             <option value="newest">Newest First</option>
             <option value="oldest">Oldest First</option>

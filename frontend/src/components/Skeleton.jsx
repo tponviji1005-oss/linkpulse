@@ -1,38 +1,8 @@
-function Skeleton({ className, count = 1, height, width }) {
-  return (
-    <>
-      {Array.from({ length: count }, (_, i) => (
-        <div
-          key={i}
-          className={`skeleton ${className || ''}`}
-          style={{ height: height || undefined, width: width || undefined }}
-        />
-      ))}
-    </>
-  );
-}
-
 function StatCardSkeleton() {
   return (
     <div className="stat-card stat-card-loading">
       <div className="stat-skeleton" />
       <div className="stat-skeleton stat-skeleton-label" />
-    </div>
-  );
-}
-
-function TableSkeleton({ rows = 5 }) {
-  return (
-    <div className="table-skeleton">
-      {Array.from({ length: rows }, (_, i) => (
-        <div key={i} className="table-skeleton-row">
-          <div className="skeleton" style={{ width: '20%' }} />
-          <div className="skeleton" style={{ width: '40%' }} />
-          <div className="skeleton" style={{ width: '10%' }} />
-          <div className="skeleton" style={{ width: '15%' }} />
-          <div className="skeleton" style={{ width: '15%' }} />
-        </div>
-      ))}
     </div>
   );
 }
@@ -48,14 +18,36 @@ function CardSkeleton() {
   );
 }
 
+function HealthCardSkeleton() {
+  return (
+    <div className="health-card health-card-loading">
+      <span className="health-dot skeleton" aria-hidden="true" />
+      <div className="health-card-info">
+        <div className="skeleton" style={{ height: '14px', width: '120px', marginBottom: '8px' }} />
+        <div className="skeleton" style={{ height: '20px', width: '80px' }} />
+      </div>
+    </div>
+  );
+}
+
 function AnalyticsSkeleton() {
   return (
     <div className="analytics-skeleton-grid">
+      <div className="analytics-skeleton-exec">
+        <CardSkeleton />
+      </div>
       <div className="analytics-skeleton-kpi">
         <StatCardSkeleton />
         <StatCardSkeleton />
         <StatCardSkeleton />
         <StatCardSkeleton />
+      </div>
+      <div className="analytics-skeleton-health">
+        <HealthCardSkeleton />
+      </div>
+      <div className="analytics-skeleton-cards">
+        <CardSkeleton />
+        <CardSkeleton />
       </div>
       <div className="analytics-skeleton-chart">
         <div className="skeleton" style={{ height: '300px' }} />
@@ -68,4 +60,4 @@ function AnalyticsSkeleton() {
   );
 }
 
-export { Skeleton, StatCardSkeleton, TableSkeleton, CardSkeleton, AnalyticsSkeleton };
+export { StatCardSkeleton, AnalyticsSkeleton };

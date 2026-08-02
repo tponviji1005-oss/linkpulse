@@ -1,5 +1,4 @@
 const { parseBrowser, parseBrowserVersion, parseOS, parseOSVersion, parseDevice } = require("../utils/deviceParser");
-const { classifyReferrer } = require("../utils/referrerParser");
 const { isBot } = require("../utils/botDetection");
 const geoip = require("geoip-lite");
 
@@ -34,6 +33,15 @@ function getCountry(ip) {
   if (!ip) return null;
   const result = geoip.lookup(ip);
   return result ? result.country : null;
+}
+
+function detectCountry(req) {
+  return getCountry(extractIPAddress(req));
+}
+
+function detectDeviceType(req) {
+  const type = parseDevice(extractUserAgent(req));
+  return type ? type.toLowerCase() : "desktop";
 }
 
 function buildClickData({ linkId, req }) {
@@ -94,13 +102,10 @@ function getDateRange(period) {
 
 module.exports = {
   buildClickData,
-  extractIPAddress,
-  extractUserAgent,
-  extractLanguage,
-  extractReferer,
-  normalizeUserAgent,
   logClick,
   isDev,
   getDateRange,
-  getCountry,
+  detectCountry,
+  detectDeviceType,
+  extractIPAddress,
 };

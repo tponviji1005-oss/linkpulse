@@ -15,17 +15,18 @@ function Pagination({ page, totalPages, onPageChange }) {
   }
 
   return (
-    <div className="pagination">
+    <div className="pagination" role="navigation" aria-label="Pagination">
       <button
         className="btn btn-sm btn-page"
         disabled={page <= 1}
         onClick={() => onPageChange(page - 1)}
+        aria-label="Previous page"
       >
         Prev
       </button>
       {start > 1 && (
         <>
-          <button className="btn btn-sm btn-page" onClick={() => onPageChange(1)}>1</button>
+          <button className="btn btn-sm btn-page" onClick={() => onPageChange(1)} aria-label="Go to page 1">1</button>
           {start > 2 && <span className="pagination-ellipsis">...</span>}
         </>
       )}
@@ -34,6 +35,8 @@ function Pagination({ page, totalPages, onPageChange }) {
           key={p}
           className={`btn btn-sm btn-page ${p === page ? 'btn-page-active' : ''}`}
           onClick={() => onPageChange(p)}
+          aria-label={`Go to page ${p}`}
+          aria-current={p === page ? 'page' : undefined}
         >
           {p}
         </button>
@@ -41,13 +44,14 @@ function Pagination({ page, totalPages, onPageChange }) {
       {end < totalPages && (
         <>
           {end < totalPages - 1 && <span className="pagination-ellipsis">...</span>}
-          <button className="btn btn-sm btn-page" onClick={() => onPageChange(totalPages)}>{totalPages}</button>
+          <button className="btn btn-sm btn-page" onClick={() => onPageChange(totalPages)} aria-label={`Go to page ${totalPages}`}>{totalPages}</button>
         </>
       )}
       <button
         className="btn btn-sm btn-page"
         disabled={page >= totalPages}
         onClick={() => onPageChange(page + 1)}
+        aria-label="Next page"
       >
         Next
       </button>

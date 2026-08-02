@@ -33,8 +33,7 @@ function createRateLimiter(options = {}) {
           console.log(`Rate Limit BLOCKED — ${ip} exceeded ${max}`);
         }
         return res.status(429).json({
-          success: false,
-          message: 'Too many requests. Please try again later.',
+          error: 'Too many requests. Please try again later.',
         });
       }
 

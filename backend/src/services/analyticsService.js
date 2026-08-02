@@ -1,4 +1,5 @@
 const analyticsRepository = require("../repositories/analyticsRepository");
+const prisma = require("../config/prisma");
 const { buildClickData, logClick, isDev, getDateRange } = require("../helpers/analyticsHelper");
 const { classifyReferrer } = require("../utils/referrerParser");
 const { isRepeatedClick } = require("../utils/botDetection");
@@ -10,16 +11,16 @@ const ANALYTICS_CACHE_TTL = 60;
 const FLAG_WINDOW_MS = 60000;
 const FLAG_THRESHOLD = 50;
 
-async function recordClick({ linkId, req }) {
-  const clickData = buildClickData({ linkId, req });
+async function insertClick(client, clickData) {
+  const linkId = clickData.linkId;
 
   let recentClicks = 0;
   if (clickData.ipAddress) {
     const since = new Date(Date.now() - FLAG_WINDOW_MS);
-    recentClicks = await analyticsRepository.countClicksSince(linkId, clickData.ipAddress, since);
+    recentClicks = await analyticsRepository.countClicksSince(linkId, clickData.ipAddress, since, client);
 
     if (recentClicks + 1 >= FLAG_THRESHOLD) {
-      await analyticsRepository.flagLink(linkId);
+      await analyticsRepository.flagLink(linkId, client);
     }
   }
 
@@ -27,11 +28,54 @@ async function recordClick({ linkId, req }) {
     clickData.isBot = true;
   }
 
-  const click = await analyticsRepository.createClick(clickData);
+  const click = await analyticsRepository.createClick(clickData, client);
 
   logClick(clickData);
 
   return click;
+}
+
+async function recordClick({ linkId, req, redirectType, abVariantLabel }) {
+  const clickData = buildClickData({ linkId, req });
+  clickData.redirectType = redirectType || 'default';
+  if (abVariantLabel) clickData.abVariantLabel = abVariantLabel;
+
+  return insertClick(prisma, clickData);
+}
+
+async function recordClickWithLimitCheck({ linkId, req, redirectType, abVariantLabel }) {
+  const clickData = buildClickData({ linkId, req });
+  clickData.redirectType = redirectType || 'default';
+  if (abVariantLabel) clickData.abVariantLabel = abVariantLabel;
+
+  return prisma.$transaction(async (tx) => {
+    const rows = await tx.$queryRaw`
+      SELECT id, "maxClicks"
+      FROM links
+      WHERE id = ${linkId}::uuid
+      FOR UPDATE
+    `;
+
+    if (!rows || rows.length === 0) {
+      return { status: "not_found", click: null };
+    }
+
+    const maxClicks = rows[0].maxClicks;
+
+    if (maxClicks != null) {
+      const count = await analyticsRepository.countClicks(linkId, tx);
+      if (count >= maxClicks) {
+        await tx.link.updateMany({
+          where: { id: linkId },
+          data: { isActive: false },
+        });
+        return { status: "limit_reached", click: null };
+      }
+    }
+
+    const click = await insertClick(tx, clickData);
+    return { status: "ok", click };
+  });
 }
 
 async function getCachedOrCompute(cacheKey, computeFn) {
@@ -172,6 +216,7 @@ async function getReferrerBreakdown({ linkId, period }) {
 
 module.exports = {
   recordClick,
+  recordClickWithLimitCheck,
   getOverview,
   getTimeline,
   getDeviceBreakdown,

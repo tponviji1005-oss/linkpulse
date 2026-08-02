@@ -89,10 +89,6 @@ async function disconnectRedis() {
   }
 }
 
-function isRedisConnected() {
-  return client !== null && client.status === "ready";
-}
-
 function getRedisClient() {
   return client;
 }
@@ -102,6 +98,5 @@ createClient();
 module.exports = {
   connectRedis,
   disconnectRedis,
-  isRedisConnected,
   getRedisClient,
 };
